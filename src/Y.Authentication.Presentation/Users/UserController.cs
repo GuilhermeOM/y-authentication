@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Y.Authentication.Domain;
 
 namespace Y.Authentication.Presentation.Users;
 
@@ -10,6 +9,6 @@ public class UserController : ApiController
     public async Task<IActionResult> Example()
     {
         await Task.Delay(1000);
-        return Ok(new User);
+        return Ok("example");
     }
 }

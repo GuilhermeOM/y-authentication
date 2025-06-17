@@ -11,9 +11,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Application\Y.Authentication.Application\Y.Authentication.Application.csproj" />
-    <ProjectReference Include="..\..\Infrastructure\Y.Authentication.Infrastructure\Y.Authentication.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\Presentation\Y.Authentication.Presentation\Y.Authentication.Presentation.csproj" />
+    <ProjectReference Include="..\Y.Authentication.Application\Y.Authentication.Application.csproj" />
+    <ProjectReference Include="..\Y.Authentication.Domain\Y.Authentication.Domain.csproj" />
+    <ProjectReference Include="..\Y.Authentication.Infrastructure\Y.Authentication.Infrastructure.csproj" />
+    <ProjectReference Include="..\Y.Authentication.Presentation\Y.Authentication.Presentation.csproj" />
   </ItemGroup>
 
 </Project>
