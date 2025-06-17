@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Y.Authentication.Domain;
 
-namespace Y.Authentication.Presentation.User;
+namespace Y.Authentication.Presentation.Users;
 
 [Route("api/user")]
 public class UserController : ApiController
@@ -9,6 +10,6 @@ public class UserController : ApiController
     public async Task<IActionResult> Example()
     {
         await Task.Delay(1000);
-        return Ok("Example");
+        return Ok(new User);
     }
 }
