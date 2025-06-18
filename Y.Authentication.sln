@@ -10,6 +10,10 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{44950ACC-F05B-406D-A683-B6E69E400C76}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		config.alloy = config.alloy
+		docker-compose.yml = docker-compose.yml
+		Dockerfile = Dockerfile
+		loki-config.yaml = loki-config.yaml
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Y.Authentication.Api", "src\Y.Authentication.Api\Y.Authentication.Api.csproj", "{9AD4AD3E-D504-4949-AF27-44903D5B748A}"

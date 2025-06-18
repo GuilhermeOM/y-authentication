@@ -1,0 +1,63 @@
+// This component is responsible for disovering new containers within the docker environment
+discovery.docker "default" {
+	host = "unix:///var/run/docker.sock"
+	refresh_interval = "5s"
+}
+
+// This component is responsible for relabeling the discovered containers
+discovery.relabel "filtered" {
+	targets = discovery.docker.default.targets
+
+	rule {
+		source_labels = ["__meta_docker_container_label_log_collect"]
+		regex = "true"
+    action = "keep"
+	}
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    target_label = "container_name"
+    replacement = "${1}"
+    regex = "/(.*)"
+  }
+}
+
+// This component is responsible for collecting logs from the discovered containers
+loki.source.docker "default" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.filtered.output
+  forward_to = [loki.write.default.receiver]
+}
+
+// This component is responsible for writing the logs to Loki
+loki.write "default" {
+	endpoint {
+		url  = "http://loki:3100/loki/api/v1/push"
+	}
+}
+
+// Enables the ability to view logs in the Alloy UI in realtime
+livedebugging {
+  enabled = true
+}
+
+otelcol.receiver.otlp "default" {
+    http {}
+    grpc {}
+
+    output {
+        logs = [otelcol.processor.batch.default.input]
+    }
+}
+
+otelcol.processor.batch "default" {
+    output {
+        logs = [otelcol.exporter.otlphttp.default.input]
+    }
+}
+
+otelcol.exporter.otlphttp "default" {
+  client {
+    endpoint = "http://loki:3100/otlp"
+  }
+}
