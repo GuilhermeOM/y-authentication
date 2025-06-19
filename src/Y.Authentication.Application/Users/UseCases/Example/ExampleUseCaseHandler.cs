@@ -1,5 +1,4 @@
-﻿using System.Net;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Y.Authentication.Application.Abstractions.Messaging;
 using Y.Authentication.Domain.Shared;
 

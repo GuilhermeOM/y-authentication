@@ -6,12 +6,11 @@ var cultureInfo = CultureInfo.CreateSpecificCulture("en-US");
 CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
 CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 
-var builder = WebApplication.CreateBuilder(args);
-
 Log.Logger = new LoggerConfiguration()
-  .ReadFrom
-  .Configuration(builder.Configuration)
+  .Enrich.FromLogContext()
   .CreateBootstrapLogger();
+
+var builder = WebApplication.CreateBuilder(args);
 
 try
 {

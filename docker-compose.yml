@@ -1,14 +1,14 @@
 services:
-  y_authentication_api:
-    image: y_authentication_api
-    container_name: y_authentication_api
-    labels:
-      log_collect: "true"
-    build: .
-    ports:
-      - 8080:8080
-    networks:
-      - loki
+  # y_authentication_api:
+  #   image: y_authentication_api
+  #   container_name: y_authentication_api
+  #   labels:
+  #     log_collect: "true"
+  #   build: .
+  #   ports:
+  #     - 8080:8080
+  #   networks:
+  #     - loki
   alloy:
     image: grafana/alloy:latest
     ports:
