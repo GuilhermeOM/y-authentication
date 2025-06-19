@@ -8,7 +8,8 @@ internal static class LoggingDecorator
 {
     internal sealed class UseCaseHandler<TRequest>(
         IUseCaseHandler<TRequest> innerHandler,
-        ILogger<UseCaseHandler<TRequest>> logger) : IUseCaseHandler<TRequest> where TRequest : IUseCase
+        ILogger<UseCaseHandler<TRequest>> logger) : IUseCaseHandler<TRequest>
+        where TRequest : IUseCase
     {
         public async Task<Result> HandleAsync(TRequest request, CancellationToken cancellationToken)
         {

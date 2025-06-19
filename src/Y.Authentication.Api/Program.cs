@@ -1,5 +1,6 @@
 using System.Globalization;
 using Serilog;
+using Y.Authentication.Api.Middlewares;
 using Y.Authentication.Application;
 
 var cultureInfo = CultureInfo.CreateSpecificCulture("en-US");
@@ -41,9 +42,13 @@ try
 
     app.UseHttpsRedirection();
 
+    app.UseMiddleware<LoggingCorrelationMiddleware>();
+
     app.UseAuthorization();
 
     app.MapControllers();
+
+    app.UseSerilogRequestLogging();
 
     app.Run();
 }
