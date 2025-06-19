@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Y.Authentication.Application.Abstractions.Messaging;
+using Y.Authentication.Application.Users.UseCases.Example;
 
 namespace Y.Authentication.Presentation.Users;
 
@@ -7,18 +9,30 @@ namespace Y.Authentication.Presentation.Users;
 public class UserController : ApiController
 {
     private readonly ILogger<UserController> _logger;
+    private readonly IUseCaseHandler<ExampleUseCase, ExampleUseCaseResponse> _exampleUseCaseHandler;
 
-    public UserController(ILogger<UserController> logger)
+    public UserController(
+        ILogger<UserController> logger,
+        IUseCaseHandler<ExampleUseCase, ExampleUseCaseResponse> exampleUseCaseHandler)
     {
         _logger = logger;
+        _exampleUseCaseHandler = exampleUseCaseHandler;
     }
 
     [HttpGet]
-    public async Task<IActionResult> Example()
+    public async Task<IActionResult> Example(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("logging demo, {@Demo}", new { Id = "id", Name = "Name", Age = 1 });
+        _logger.LogInformation("Request at {EndpointName}", nameof(Example));
 
-        await Task.Delay(1000);
-        return Ok("example");
+        var request = new ExampleUseCase("World");
+        var response = await _exampleUseCaseHandler.HandleAsync(request, cancellationToken);
+
+        if (response.IsFailure)
+        {
+            _logger.LogError("Error handling {EndpointName}: {@ErrorMessage}", nameof(Example), response.Error);
+            return BadRequest(response.Error);
+        }
+
+        return Ok(response.Value);
     }
 }
