@@ -2,6 +2,7 @@ using System.Globalization;
 using Serilog;
 using Y.Authentication.Api.Middlewares;
 using Y.Authentication.Application;
+using Y.Authentication.Infrastructure;
 
 var cultureInfo = CultureInfo.CreateSpecificCulture("en-US");
 CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
@@ -21,7 +22,8 @@ try
         .Enrich.FromLogContext());
 
     builder.Services
-        .AddApplication(builder.Configuration);
+        .AddApplication(builder.Configuration)
+        .AddInfrastructure(builder.Configuration);
 
     var presentationAssembly = typeof(Y.Authentication.Presentation.AssemblyReference).Assembly;
 
