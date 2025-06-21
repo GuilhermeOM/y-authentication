@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Y.Authentication.Application.Abstractions.Messaging;
-using Y.Authentication.Application.Users.UseCases.Example;
+using Y.Authentication.Application.Users.UseCases.CreateUser;
 
 namespace Y.Authentication.Presentation.Users;
 
@@ -9,30 +9,27 @@ namespace Y.Authentication.Presentation.Users;
 public class UserController : ApiController
 {
     private readonly ILogger<UserController> _logger;
-    private readonly IUseCaseHandler<ExampleUseCase, ExampleUseCaseResponse> _exampleUseCaseHandler;
+    private readonly IUseCaseHandler<CreateUserUseCase> _createUserUseCaseHandler;
 
     public UserController(
         ILogger<UserController> logger,
-        IUseCaseHandler<ExampleUseCase, ExampleUseCaseResponse> exampleUseCaseHandler)
+        IUseCaseHandler<CreateUserUseCase> createUserUseCaseHandler)
     {
         _logger = logger;
-        _exampleUseCaseHandler = exampleUseCaseHandler;
+        _createUserUseCaseHandler = createUserUseCaseHandler;
     }
 
-    [HttpGet]
-    public async Task<IActionResult> Example(CancellationToken cancellationToken)
+    [HttpPost]
+    public async Task<IActionResult> CreateUser(CreateUserUseCase request, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Request at {EndpointName}", nameof(Example));
+        var response = await _createUserUseCaseHandler.HandleAsync(request, cancellationToken);
 
-        var request = new ExampleUseCase("World");
-        var response = await _exampleUseCaseHandler.HandleAsync(request, cancellationToken);
+        _logger.LogInformation("response: {@Response}", response);
 
         if (response.IsFailure)
         {
-            _logger.LogError("Error handling {EndpointName}: {@ErrorMessage}", nameof(Example), response.Error);
             return BadRequest(response.Error);
         }
-
-        return Ok(response.Value);
+        return Ok("success");
     }
 }
