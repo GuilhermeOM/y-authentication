@@ -23,13 +23,6 @@ public class UserController : ApiController
     public async Task<IActionResult> CreateUser(CreateUserUseCase request, CancellationToken cancellationToken)
     {
         var response = await _createUserUseCaseHandler.HandleAsync(request, cancellationToken);
-
-        _logger.LogInformation("response: {@Response}", response);
-
-        if (response.IsFailure)
-        {
-            return BadRequest(response.Error);
-        }
-        return Ok("success");
+        return response.IsFailure ? HandleFailure(response) : Ok("ok");
     }
 }

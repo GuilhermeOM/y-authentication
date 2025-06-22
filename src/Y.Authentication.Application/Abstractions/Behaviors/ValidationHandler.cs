@@ -1,4 +1,5 @@
-﻿using FluentValidation;
+﻿using System.Net;
+using FluentValidation;
 using FluentValidation.Results;
 using Y.Authentication.Application.Abstractions.Messaging;
 using Y.Authentication.Domain.Shared;
@@ -24,7 +25,7 @@ internal static class ValidationDecorator
         {
             var validationFailures = await ValidateAsync(request, _validators);
 
-            if (!_validators.Any())
+            if (validationFailures.Length == 0)
             {
                 return await _innerHandler.HandleAsync(request, cancellationToken);
             }
@@ -52,7 +53,7 @@ internal static class ValidationDecorator
         {
             var validationFailures = await ValidateAsync(request, _validators);
 
-            if (!_validators.Any())
+            if (validationFailures.Length == 0)
             {
                 return await _innerHandler.HandleAsync(request, cancellationToken);
             }
@@ -83,7 +84,10 @@ internal static class ValidationDecorator
 
     private static ValidationError CreateValidationError(ValidationFailure[] validationFailures)
     {
-        var errors = validationFailures.Select(failure => new Error(failure.ErrorCode, failure.ErrorMessage)).ToArray();
+        var errors = validationFailures
+            .Select(failure => new Error(HttpStatusCode.BadRequest, failure.ErrorCode, failure.ErrorMessage))
+            .ToArray();
+
         return new(errors);
     }
 }

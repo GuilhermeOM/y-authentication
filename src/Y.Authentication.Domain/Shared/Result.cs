@@ -49,17 +49,3 @@ public class Result<TValue> : Result
     }
 }
 
-public class ValidationError
-{
-    public Error[] Errors { get; } = [];
-
-    public ValidationError(Error[] errors)
-    {
-        if (errors == null || errors.Length == 0)
-        {
-            throw new ArgumentException("Errors cannot be null or empty", nameof(errors));
-        }
-
-        Errors = errors;
-    }
-}
