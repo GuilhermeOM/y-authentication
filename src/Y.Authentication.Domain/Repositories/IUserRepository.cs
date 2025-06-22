@@ -1,2 +1,8 @@
-﻿namespace Y.Authentication.Domain.Repositories;
-public interface IUserRepository;
+﻿using Y.Authentication.Domain.Entities;
+
+namespace Y.Authentication.Domain.Repositories;
+public interface IUserRepository
+{
+    Task<bool> ExistsByEmailAsync(string email, CancellationToken cancellationToken = default);
+    Task<Guid> CreateAsync(User user, CancellationToken cancellationToken = default);
+}
