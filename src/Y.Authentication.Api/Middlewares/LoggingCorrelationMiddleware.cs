@@ -28,5 +28,4 @@ internal sealed class LoggingCorrelationMiddleware
 
         return correlationId.FirstOrDefault() ?? context.TraceIdentifier;
     }
-
 }

@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using FluentValidation;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Y.Authentication.Application.Abstractions.Behaviors;
 using Y.Authentication.Application.Abstractions.Messaging;
@@ -10,6 +11,7 @@ public static class DependencyInjection
     {
         return services
             .AddUseCases()
+            .AddValidators()
             .AddDecorators();
     }
 
@@ -26,8 +28,16 @@ public static class DependencyInjection
         return services;
     }
 
+    public static IServiceCollection AddValidators(this IServiceCollection services)
+    {
+        return services.AddValidatorsFromAssembly(typeof(AssemblyReference).Assembly);
+    }
+
     public static IServiceCollection AddDecorators(this IServiceCollection services)
     {
+        services.TryDecorate(typeof(IUseCaseHandler<>), typeof(ValidationDecorator.ValidationHandler<>));
+        services.TryDecorate(typeof(IUseCaseHandler<,>), typeof(ValidationDecorator.ValidationHandler<,>));
+
         services.TryDecorate(typeof(IUseCaseHandler<>), typeof(LoggingDecorator.UseCaseHandler<>));
         services.TryDecorate(typeof(IUseCaseHandler<,>), typeof(LoggingDecorator.UseCaseHandler<,>));
 
