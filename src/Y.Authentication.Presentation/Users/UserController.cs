@@ -20,7 +20,7 @@ public class UserController : ApiController
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateUser(CreateUserUseCase request, CancellationToken cancellationToken)
+    public async Task<IActionResult> CreateUserAsync(CreateUserUseCase request, CancellationToken cancellationToken)
     {
         var response = await _createUserUseCaseHandler.HandleAsync(request, cancellationToken);
         return response.IsFailure ? HandleFailure(response) : Ok("ok");

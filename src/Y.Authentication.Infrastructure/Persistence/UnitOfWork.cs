@@ -4,6 +4,8 @@ using Y.Authentication.Domain.Shared;
 namespace Y.Authentication.Infrastructure.Persistence;
 internal sealed class UnitOfWork : IUnitOfWork
 {
+    public const string TransactionErrorCode = "TRANSACTION_ERROR";
+
     private readonly AppDataContext _context;
 
     public UnitOfWork(AppDataContext context)
@@ -35,7 +37,7 @@ internal sealed class UnitOfWork : IUnitOfWork
         catch (Exception)
         {
             await transaction.RollbackAsync(cancellationToken);
-            return Result.Failure(new Error("TRANSACTION_ERROR", "Some transaction error occurred"));
+            return Result.Failure(new Error(TransactionErrorCode, "Some transaction error occurred"));
         }
     }
 
