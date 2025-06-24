@@ -67,8 +67,6 @@ internal sealed class CreateUserUseCaseHandler : IUseCaseHandler<CreateUserUseCa
                 _logger.LogError("Failed to create metadata for user {UserId}", createdUserId);
                 return Result.Failure(UserMetadataErrors.UserMetadataCreationFailed);
             }
-
-            _logger.LogInformation("User {UserId} created successfully", createdUserId);
             return Result.Success();
         }, cancellationToken);
     }
