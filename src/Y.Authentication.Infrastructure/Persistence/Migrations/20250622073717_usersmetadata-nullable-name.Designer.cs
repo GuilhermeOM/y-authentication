@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Y.Authentication.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using Y.Authentication.Infrastructure.Persistence;
 namespace Y.Authentication.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDataContext))]
-    partial class AppDataContextModelSnapshot : ModelSnapshot
+    [Migration("20250622073717_usersmetadata-nullable-name")]
+    partial class usersmetadatanullablename
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -46,6 +49,9 @@ namespace Y.Authentication.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UserMetadataId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("VerifiedAt")
                         .HasColumnType("datetime2");

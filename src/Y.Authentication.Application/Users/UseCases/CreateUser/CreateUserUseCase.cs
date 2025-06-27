@@ -4,5 +4,5 @@ namespace Y.Authentication.Application.Users.UseCases.CreateUser;
 public sealed record CreateUserUseCase(
     string Email,
     string Password,
-    string Name,
+    string? Name,
     DateOnly BirthDate) : IUseCase;

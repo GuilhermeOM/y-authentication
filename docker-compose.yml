@@ -57,15 +57,15 @@ services:
            basicAuth: false
            isDefault: true
            version: 1
-           editable: true 
+           editable: true
          EOF
          /run.sh
     networks:
       - loki
-    
+
 networks:
     loki:
 
-    
+
 
 

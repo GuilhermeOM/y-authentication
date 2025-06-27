@@ -2,7 +2,7 @@
 using Y.Authentication.Domain.Entities;
 
 namespace Y.Authentication.Infrastructure.Persistence;
-internal sealed class AppDataContext : DbContext
+internal class AppDataContext : DbContext
 {
     public AppDataContext(DbContextOptions options) : base(options)
     {

@@ -13,9 +13,5 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(prop => prop.Email)
             .IsRequired()
             .HasMaxLength(256);
-
-        builder.HasOne(entity => entity.Metadata)
-            .WithOne(entity => entity.User)
-            .HasForeignKey<User>(userMetadata => userMetadata.UserMetadataId);
     }
 }
