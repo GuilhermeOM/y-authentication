@@ -11,7 +11,6 @@ public class User : Entity
     public DateTime? VerifiedAt { get; set; }
     public string? ResetPasswordToken { get; }
 
-    public Guid? UserMetadataId { get; set; }
     public UserMetadata? Metadata { get; set; }
 
     private static string CreateRandomToken() => Convert.ToHexString(RandomNumberGenerator.GetBytes(64));
