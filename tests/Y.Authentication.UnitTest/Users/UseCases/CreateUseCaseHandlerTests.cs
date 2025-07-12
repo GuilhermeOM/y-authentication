@@ -1,4 +1,5 @@
 ﻿using FluentAssertions;
+using MassTransit;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Y.Authentication.Application.Users.UseCases.CreateUser;
@@ -6,11 +7,13 @@ using Y.Authentication.Domain.Entities;
 using Y.Authentication.Domain.Errors;
 using Y.Authentication.Domain.Repositories;
 using Y.Authentication.Domain.Shared;
+using Y.Contract.Root.Notification.Events;
 
 namespace Y.Authentication.UnitTest.Users.UseCases;
 public class CreateUseCaseHandlerTests
 {
     private readonly Mock<ILogger<CreateUserUseCaseHandler>> _loggerMock;
+    private readonly Mock<IPublishEndpoint> _publishEndpointMock;
     private readonly Mock<IUserRepository> _userRepositoryMock;
     private readonly Mock<IUserMetadataRepository> _userMetadataRepositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
@@ -20,6 +23,7 @@ public class CreateUseCaseHandlerTests
     public CreateUseCaseHandlerTests()
     {
         _loggerMock = new Mock<ILogger<CreateUserUseCaseHandler>>();
+        _publishEndpointMock = new Mock<IPublishEndpoint>();
         _userRepositoryMock = new Mock<IUserRepository>();
         _userMetadataRepositoryMock = new Mock<IUserMetadataRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
@@ -30,6 +34,7 @@ public class CreateUseCaseHandlerTests
 
         _handler = new CreateUserUseCaseHandler(
             _loggerMock.Object,
+            _publishEndpointMock.Object,
             _userRepositoryMock.Object,
             _userMetadataRepositoryMock.Object,
             _unitOfWorkMock.Object);
@@ -73,6 +78,9 @@ public class CreateUseCaseHandlerTests
         // Assert
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeEquivalentTo(UserErrors.UserCreationFailed);
+
+        _publishEndpointMock
+            .Verify(mock => mock.Publish(It.IsAny<SendEmailEvent>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -101,6 +109,9 @@ public class CreateUseCaseHandlerTests
         // Assert
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeEquivalentTo(UserMetadataErrors.UserMetadataCreationFailed);
+
+        _publishEndpointMock
+            .Verify(mock => mock.Publish(It.IsAny<SendEmailEvent>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -128,6 +139,11 @@ public class CreateUseCaseHandlerTests
 
         // Assert
         result.IsSuccess.Should().BeTrue();
+
+        _publishEndpointMock
+            .Verify(mock => mock.Publish(
+                It.Is<SendEmailEvent>(@event => @event.CorrelationId == createdUserId.ToString() && @event.Email == request.Email),
+                It.IsAny<CancellationToken>()), Times.Never);
     }
 
     public static CreateUserUseCase CreateRequest() => new(
