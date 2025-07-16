@@ -93,7 +93,7 @@ internal sealed class CreateUserUseCaseHandler : IUseCaseHandler<CreateUserUseCa
         {
             CorrelationId = userId.ToString(),
             Email = email,
-            Template = EmailTemplate.ACCOUNT_ACTIVATION
+            Template = EmailTemplate.ACCOUNT_VERIFICATION
         }, callback =>
         {
             callback.SetRoutingKey(SendEmailEvent.RoutingKey);
