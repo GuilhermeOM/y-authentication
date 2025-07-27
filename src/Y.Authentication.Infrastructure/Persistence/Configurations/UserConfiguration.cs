@@ -10,6 +10,9 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.HasIndex(prop => prop.Email)
             .IsUnique();
 
+        builder.HasIndex(prop => prop.VerificationToken)
+            .IsUnique();
+
         builder.Property(prop => prop.Email)
             .IsRequired()
             .HasMaxLength(256);

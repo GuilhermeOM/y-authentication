@@ -42,7 +42,9 @@ internal sealed class UserRepository : IUserRepository
             return false;
         }
 
-        user.VerifiedAt = DateTime.UtcNow;
+        var currentUtcTime = DateTime.UtcNow;
+        user.VerifiedAt = currentUtcTime;
+        user.UpdatedAt = currentUtcTime;
         return true;
     }
 }

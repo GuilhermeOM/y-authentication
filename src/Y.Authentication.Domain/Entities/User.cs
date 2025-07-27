@@ -7,7 +7,7 @@ public class User : Entity
     public required string Email { get; set; }
     public byte[] PasswordHash { get; init; } = new byte[32];
     public byte[] PasswordSalt { get; init; } = new byte[32];
-    public string VerificationToken { get; } = CreateRandomToken();
+    public string VerificationToken { get; private set; } = CreateRandomToken();
     public DateTime? VerifiedAt { get; set; }
     public string? ResetPasswordToken { get; }
 

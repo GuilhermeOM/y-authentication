@@ -12,8 +12,8 @@ using Y.Authentication.Infrastructure.Persistence;
 namespace Y.Authentication.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDataContext))]
-    [Migration("20250622073717_usersmetadata-nullable-name")]
-    partial class usersmetadatanullablename
+    [Migration("20250721001351_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -50,8 +50,9 @@ namespace Y.Authentication.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("UserMetadataId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("VerificationToken")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime?>("VerifiedAt")
                         .HasColumnType("datetime2");
@@ -59,6 +60,9 @@ namespace Y.Authentication.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("VerificationToken")
                         .IsUnique();
 
                     b.ToTable("Users");

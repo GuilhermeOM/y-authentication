@@ -1,8 +1,10 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 using MassTransit;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Y.Authentication.Application.Abstractions.Messaging;
+using Y.Authentication.Domain.Constants;
 using Y.Authentication.Domain.Entities;
 using Y.Authentication.Domain.Errors;
 using Y.Authentication.Domain.Repositories;
@@ -18,19 +20,22 @@ internal sealed class CreateUserUseCaseHandler : IUseCaseHandler<CreateUserUseCa
     private readonly IUserRepository _userRepository;
     private readonly IUserMetadataRepository _userMetadataRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     public CreateUserUseCaseHandler(
         ILogger<CreateUserUseCaseHandler> logger,
         IPublishEndpoint publishEndpoint,
         IUserRepository userRepository,
         IUserMetadataRepository userMetadataRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IHttpContextAccessor httpContextAccessor)
     {
         _logger = logger;
         _publishEndpoint = publishEndpoint;
         _userRepository = userRepository;
         _userMetadataRepository = userMetadataRepository;
         _unitOfWork = unitOfWork;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<Result> HandleAsync(CreateUserUseCase request, CancellationToken cancellationToken = default)
@@ -74,7 +79,7 @@ internal sealed class CreateUserUseCaseHandler : IUseCaseHandler<CreateUserUseCa
                 return Result.Failure(UserMetadataErrors.UserMetadataCreationFailed);
             }
 
-            await SendActivationEmailAsync(request.Email, createdUserId, cancellationToken);
+            await SendAccountVerificationEmailAsync(user, request.Name, cancellationToken);
 
             return Result.Success();
         }, cancellationToken);
@@ -87,16 +92,38 @@ internal sealed class CreateUserUseCaseHandler : IUseCaseHandler<CreateUserUseCa
         passwordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
     }
 
-    private async Task SendActivationEmailAsync(string email, Guid userId, CancellationToken cancellationToken = default)
+    private async Task SendAccountVerificationEmailAsync(
+        User user,
+        string? userName,
+        CancellationToken cancellationToken = default)
     {
-        await _publishEndpoint.Publish(new SendEmailEvent
+        var @event = new SendEmailEvent
         {
-            CorrelationId = userId.ToString(),
-            Email = email,
-            Template = EmailTemplate.ACCOUNT_VERIFICATION
-        }, callback =>
+            CorrelationId = user.Id.ToString(),
+            Email = user.Email,
+            Template = EmailTemplate.ACCOUNT_VERIFICATION,
+            Properties = new Dictionary<string, string>
+            {
+                { "VerificationLink", CreateAccountVerificationLink(user.VerificationToken) },
+                { "UserName", userName ?? string.Empty }
+            }
+        };
+
+        await _publishEndpoint.Publish(@event, callback =>
         {
             callback.SetRoutingKey(SendEmailEvent.RoutingKey);
         }, cancellationToken);
+    }
+
+    private string CreateAccountVerificationLink(string verificationToken)
+    {
+        var request = _httpContextAccessor.HttpContext?.Request;
+        if (request is null)
+        {
+            _logger.LogError("HttpContext or Request is null, cannot create verification link");
+            return string.Empty;
+        }
+
+        return $"{request.Scheme}://{request.Host}{request.PathBase}/api/user/{UserConstants.VerifyEndpoint}?VerificationToken={verificationToken}";
     }
 }
