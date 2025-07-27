@@ -1,5 +1,6 @@
 ﻿using FluentAssertions;
 using MassTransit;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Y.Authentication.Application.Users.UseCases.CreateUser;
@@ -8,6 +9,7 @@ using Y.Authentication.Domain.Errors;
 using Y.Authentication.Domain.Repositories;
 using Y.Authentication.Domain.Shared;
 using Y.Contract.Root.Notification.Events;
+using Y.Contract.Root.Notification.Shared;
 
 namespace Y.Authentication.UnitTest.Users.UseCases;
 public class CreateUseCaseHandlerTests
@@ -17,6 +19,7 @@ public class CreateUseCaseHandlerTests
     private readonly Mock<IUserRepository> _userRepositoryMock;
     private readonly Mock<IUserMetadataRepository> _userMetadataRepositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+    private readonly Mock<IHttpContextAccessor> _httpContextAccessorMock;
 
     private readonly CreateUserUseCaseHandler _handler;
 
@@ -27,17 +30,23 @@ public class CreateUseCaseHandlerTests
         _userRepositoryMock = new Mock<IUserRepository>();
         _userMetadataRepositoryMock = new Mock<IUserMetadataRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _httpContextAccessorMock = new Mock<IHttpContextAccessor>();
 
         _unitOfWorkMock
             .Setup(mock => mock.TransactionAsync(It.IsAny<Func<Task<Result>>>(), It.IsAny<CancellationToken>()))
             .Returns<Func<Task<Result>>, CancellationToken>((func, _) => func());
+
+        _httpContextAccessorMock
+            .Setup(mock => mock.HttpContext)
+            .Returns(new DefaultHttpContext());
 
         _handler = new CreateUserUseCaseHandler(
             _loggerMock.Object,
             _publishEndpointMock.Object,
             _userRepositoryMock.Object,
             _userMetadataRepositoryMock.Object,
-            _unitOfWorkMock.Object);
+            _unitOfWorkMock.Object,
+            _httpContextAccessorMock.Object);
     }
 
     [Fact]
@@ -134,6 +143,8 @@ public class CreateUseCaseHandlerTests
             .Setup(mock => mock.CreateAsync(It.Is<UserMetadata>(metadata => metadata.UserId == createdUserId && metadata.Name == request.Name), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Guid.NewGuid());
 
+        var payload = It.IsAny<SendEmailEvent>();
+
         // Act
         var result = await _handler.HandleAsync(request, default);
 
@@ -142,13 +153,27 @@ public class CreateUseCaseHandlerTests
 
         _publishEndpointMock
             .Verify(mock => mock.Publish(
-                It.Is<SendEmailEvent>(@event => @event.CorrelationId == createdUserId.ToString() && @event.Email == request.Email),
-                It.IsAny<CancellationToken>()), Times.Never);
+                It.Is<SendEmailEvent>(@event =>
+                    @event.Email == request.Email
+                    && @event.Template == EmailTemplate.ACCOUNT_VERIFICATION
+                    && ContainsRequiredProperties(@event.Properties, request)),
+                It.IsAny<IPipe<PublishContext<SendEmailEvent>>>(),
+                It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    public static CreateUserUseCase CreateRequest() => new(
-        "email@email.com",
-        "password",
-        "name",
-        DateOnly.FromDateTime(DateTime.Now));
+    public static CreateUserUseCase CreateRequest() => new()
+    {
+        Email = "email@email.com",
+        Password = "password",
+        Name = "name",
+        BirthDate = DateOnly.FromDateTime(DateTime.Now)
+    };
+
+    private static bool ContainsRequiredProperties(Dictionary<string, string> properties, CreateUserUseCase request)
+    {
+        return properties.ContainsKey("VerificationLink")
+            && properties["VerificationLink"] is not null
+            && properties.ContainsKey("UserName")
+            && properties["UserName"] == (request.Name ?? string.Empty);
+    }
 }
