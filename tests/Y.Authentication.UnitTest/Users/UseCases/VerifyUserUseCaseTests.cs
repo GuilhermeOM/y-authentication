@@ -24,8 +24,8 @@ public class VerifyUserUseCaseTests
         _unitOfWorkMock = new Mock<IUnitOfWork>();
 
         _unitOfWorkMock
-            .Setup(mock => mock.TransactionAsync(It.IsAny<Func<Task<Result>>>(), It.IsAny<CancellationToken>()))
-            .Returns<Func<Task<Result>>, CancellationToken>((func, _) => func());
+            .Setup(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         _handler = new VerifyUserUseCaseHandler(
             _publishEndpointMock.Object,
@@ -55,6 +55,9 @@ public class VerifyUserUseCaseTests
 
         _publishEndpointMock
             .Verify(mock => mock.Publish(It.IsAny<CreateProfileEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+
+        _unitOfWorkMock
+            .Verify(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -85,6 +88,9 @@ public class VerifyUserUseCaseTests
 
         _publishEndpointMock
             .Verify(mock => mock.Publish(It.IsAny<CreateProfileEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+
+        _unitOfWorkMock
+            .Verify(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -115,6 +121,9 @@ public class VerifyUserUseCaseTests
 
         _publishEndpointMock
             .Verify(mock => mock.Publish(It.IsAny<CreateProfileEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+
+        _unitOfWorkMock
+            .Verify(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -155,5 +164,8 @@ public class VerifyUserUseCaseTests
 
         // Assert
         result.IsSuccess.Should().BeTrue();
+
+        _unitOfWorkMock
+            .Verify(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 }

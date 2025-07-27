@@ -35,17 +35,16 @@ internal sealed class VerifyUserUseCaseHandler : IUseCaseHandler<VerifyUserUseCa
             return Result.Failure(UserErrors.UserAlreadyVerified);
         }
 
-        return await _unitOfWork.TransactionAsync(async () =>
+        var didVerify = await _userRepository.VerifyAsync(user.Id, cancellationToken);
+        if (!didVerify)
         {
-            var didVerify = await _userRepository.VerifyAsync(user.Id, cancellationToken);
-            if (!didVerify)
-            {
-                return Result.Failure(UserErrors.UserVerificationFailed);
-            }
-            await SendCreateProfileEventAsync(user.Id, user.Metadata?.Name, cancellationToken);
+            return Result.Failure(UserErrors.UserVerificationFailed);
+        }
 
-            return Result.Success();
-        }, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await SendCreateProfileEventAsync(user.Id, user.Metadata?.Name, cancellationToken);
+
+        return Result.Success();
     }
 
     private async Task SendCreateProfileEventAsync(Guid userId, string? name, CancellationToken cancellationToken = default)

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Y.Authentication.Application.Abstractions.Messaging;
 using Y.Authentication.Application.Users.UseCases.CreateUser;
@@ -36,5 +37,14 @@ public class UserController : ApiController
     {
         var response = await _verifyUserUseCaseHandler.HandleAsync(request, cancellationToken);
         return response.IsFailure ? HandleFailure(response) : NoContent();
+    }
+
+    [Authorize]
+    [HttpPost("login")]
+    public async Task<IActionResult> LoginAsync(CancellationToken cancellationToken)
+    {
+        // This method is not implemented in the original code.
+        // You can implement it as needed or remove it if not required.
+        return NotFound("This endpoint is not implemented.");
     }
 }

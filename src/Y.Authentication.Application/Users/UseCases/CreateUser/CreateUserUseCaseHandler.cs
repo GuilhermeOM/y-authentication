@@ -55,34 +55,31 @@ internal sealed class CreateUserUseCaseHandler : IUseCaseHandler<CreateUserUseCa
             PasswordSalt = passwordSalt,
         };
 
+        var createdUserId = await _userRepository.CreateAsync(user, cancellationToken);
+        if (createdUserId == Guid.Empty)
+        {
+            _logger.LogError("Failed to create user");
+            return Result.Failure(UserErrors.UserCreationFailed);
+        }
+
         var metadata = new UserMetadata
         {
+            UserId = createdUserId,
             Name = request.Name,
             BirthDate = request.BirthDate,
         };
 
-        return await _unitOfWork.TransactionAsync(async () =>
+        var createdUserMetadataId = await _userMetadataRepository.CreateAsync(metadata, cancellationToken);
+        if (createdUserMetadataId == Guid.Empty)
         {
-            var createdUserId = await _userRepository.CreateAsync(user, cancellationToken);
-            if (createdUserId == Guid.Empty)
-            {
-                _logger.LogError("Failed to create user");
-                return Result.Failure(UserErrors.UserCreationFailed);
-            }
+            _logger.LogError("Failed to create metadata for user {UserId}", createdUserId);
+            return Result.Failure(UserMetadataErrors.UserMetadataCreationFailed);
+        }
 
-            metadata.UserId = createdUserId;
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await SendAccountVerificationEmailAsync(user, request.Name, cancellationToken);
 
-            var createdUserMetadataId = await _userMetadataRepository.CreateAsync(metadata, cancellationToken);
-            if (createdUserMetadataId == Guid.Empty)
-            {
-                _logger.LogError("Failed to create metadata for user {UserId}", createdUserId);
-                return Result.Failure(UserMetadataErrors.UserMetadataCreationFailed);
-            }
-
-            await SendAccountVerificationEmailAsync(user, request.Name, cancellationToken);
-
-            return Result.Success();
-        }, cancellationToken);
+        return Result.Success();
     }
 
     private static void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)

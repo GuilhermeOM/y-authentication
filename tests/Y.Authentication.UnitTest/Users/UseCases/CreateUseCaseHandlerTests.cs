@@ -33,8 +33,8 @@ public class CreateUseCaseHandlerTests
         _httpContextAccessorMock = new Mock<IHttpContextAccessor>();
 
         _unitOfWorkMock
-            .Setup(mock => mock.TransactionAsync(It.IsAny<Func<Task<Result>>>(), It.IsAny<CancellationToken>()))
-            .Returns<Func<Task<Result>>, CancellationToken>((func, _) => func());
+            .Setup(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         _httpContextAccessorMock
             .Setup(mock => mock.HttpContext)
@@ -65,6 +65,9 @@ public class CreateUseCaseHandlerTests
         // Assert
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeEquivalentTo(UserErrors.UserAlreadyExists);
+
+        _unitOfWorkMock
+            .Verify(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -90,6 +93,9 @@ public class CreateUseCaseHandlerTests
 
         _publishEndpointMock
             .Verify(mock => mock.Publish(It.IsAny<SendEmailEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+
+        _unitOfWorkMock
+            .Verify(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -121,6 +127,9 @@ public class CreateUseCaseHandlerTests
 
         _publishEndpointMock
             .Verify(mock => mock.Publish(It.IsAny<SendEmailEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+
+        _unitOfWorkMock
+            .Verify(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -150,6 +159,9 @@ public class CreateUseCaseHandlerTests
 
         // Assert
         result.IsSuccess.Should().BeTrue();
+
+        _unitOfWorkMock
+            .Verify(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
 
         _publishEndpointMock
             .Verify(mock => mock.Publish(
