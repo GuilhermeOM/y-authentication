@@ -28,13 +28,13 @@ public class UserController : ApiController
     public async Task<IActionResult> CreateAsync([FromBody] CreateUserUseCase request, CancellationToken cancellationToken)
     {
         var response = await _createUserUseCaseHandler.HandleAsync(request, cancellationToken);
-        return response.IsFailure ? HandleFailure(response) : Ok("user created");
+        return response.IsFailure ? HandleFailure(response) : NoContent();
     }
 
     [HttpGet(UserConstants.VerifyEndpoint)]
     public async Task<IActionResult> VerifyAsync([FromQuery] VerifyUserUseCase request, CancellationToken cancellationToken)
     {
         var response = await _verifyUserUseCaseHandler.HandleAsync(request, cancellationToken);
-        return response.IsFailure ? HandleFailure(response) : Ok("user verified");
+        return response.IsFailure ? HandleFailure(response) : NoContent();
     }
 }
