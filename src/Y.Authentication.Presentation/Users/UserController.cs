@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.AspNetCore.Mvc;
 using Y.Authentication.Application.Abstractions.Messaging;
 using Y.Authentication.Application.Users.UseCases.CreateUser;
 using Y.Authentication.Application.Users.UseCases.VerifyUser;
@@ -11,16 +9,13 @@ namespace Y.Authentication.Presentation.Users;
 [Route("api/user")]
 public class UserController : ApiController
 {
-    private readonly ILogger<UserController> _logger;
     private readonly IUseCaseHandler<CreateUserUseCase> _createUserUseCaseHandler;
     private readonly IUseCaseHandler<VerifyUserUseCase> _verifyUserUseCaseHandler;
 
     public UserController(
-        ILogger<UserController> logger,
         IUseCaseHandler<CreateUserUseCase> createUserUseCaseHandler,
         IUseCaseHandler<VerifyUserUseCase> verifyUserUseCaseHandler)
     {
-        _logger = logger;
         _createUserUseCaseHandler = createUserUseCaseHandler;
         _verifyUserUseCaseHandler = verifyUserUseCaseHandler;
     }
@@ -37,14 +32,5 @@ public class UserController : ApiController
     {
         var response = await _verifyUserUseCaseHandler.HandleAsync(request, cancellationToken);
         return response.IsFailure ? HandleFailure(response) : NoContent();
-    }
-
-    [Authorize]
-    [HttpPost("login")]
-    public async Task<IActionResult> LoginAsync(CancellationToken cancellationToken)
-    {
-        // This method is not implemented in the original code.
-        // You can implement it as needed or remove it if not required.
-        return NotFound("This endpoint is not implemented.");
     }
 }

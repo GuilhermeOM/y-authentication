@@ -1,7 +1,7 @@
 ﻿using FluentValidation;
 
 namespace Y.Authentication.Application.Users.UseCases.CreateUser;
-public sealed class CreateUserValidator : AbstractValidator<CreateUserUseCase>
+internal sealed class CreateUserValidator : AbstractValidator<CreateUserUseCase>
 {
     public CreateUserValidator()
     {

@@ -5,4 +5,7 @@ public class UserRole : Entity
 {
     public required Guid UserId { get; set; }
     public required Guid RoleId { get; set; }
+
+    public User User { get; set; } = null!;
+    public Role Role { get; set; } = null!;
 }

@@ -11,6 +11,7 @@ public static class DependencyInjection
     {
         return services
             .AddUseCases()
+            .AddDomainEvents()
             .AddValidators()
             .AddDecorators();
     }
@@ -28,6 +29,16 @@ public static class DependencyInjection
         return services;
     }
 
+    public static IServiceCollection AddDomainEvents(this IServiceCollection services)
+    {
+        services.Scan(scan => scan.FromAssembliesOf(typeof(DependencyInjection))
+            .AddClasses(classes => classes.AssignableTo(typeof(IDomainEventHandler<>)), publicOnly: false)
+            .AsImplementedInterfaces()
+            .WithScopedLifetime());
+
+        return services;
+    }
+
     public static IServiceCollection AddValidators(this IServiceCollection services)
     {
         return services.AddValidatorsFromAssembly(typeof(AssemblyReference).Assembly);
@@ -35,6 +46,8 @@ public static class DependencyInjection
 
     public static IServiceCollection AddDecorators(this IServiceCollection services)
     {
+        services.TryDecorate(typeof(IDomainEventHandler<>), typeof(LoggingDecorator.DomainEventHandler<>));
+
         services.TryDecorate(typeof(IUseCaseHandler<>), typeof(ValidationDecorator.ValidationHandler<>));
         services.TryDecorate(typeof(IUseCaseHandler<,>), typeof(ValidationDecorator.ValidationHandler<,>));
 

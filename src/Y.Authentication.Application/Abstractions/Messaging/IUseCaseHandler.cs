@@ -8,7 +8,6 @@ public interface IUseCaseHandler<TRequest> where TRequest : IUseCase
 
 public interface IUseCaseHandler<TRequest, TResponse>
     where TRequest : IUseCase<TResponse>
-    where TResponse : class
 {
     Task<Result<TResponse>> HandleAsync(TRequest request, CancellationToken cancellationToken = default);
 }

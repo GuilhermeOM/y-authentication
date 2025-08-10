@@ -2,35 +2,34 @@
 using MassTransit;
 using Moq;
 using Y.Authentication.Application.Users.UseCases.VerifyUser;
+using Y.Authentication.Domain.DomainEvents.Base;
 using Y.Authentication.Domain.Entities;
 using Y.Authentication.Domain.Errors;
 using Y.Authentication.Domain.Repositories;
-using Y.Authentication.Domain.Shared;
-using Y.Contract.Root.Core.Events;
 
 namespace Y.Authentication.UnitTest.Users.UseCases;
 public class VerifyUserUseCaseTests
 {
-    private readonly Mock<IPublishEndpoint> _publishEndpointMock;
     private readonly Mock<IUserRepository> _userRepositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+    private readonly Mock<IDomainEventsDispatcher> _domainEventsDispatcherMock;
 
     private readonly VerifyUserUseCaseHandler _handler;
 
     public VerifyUserUseCaseTests()
     {
-        _publishEndpointMock = new Mock<IPublishEndpoint>();
         _userRepositoryMock = new Mock<IUserRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _domainEventsDispatcherMock = new Mock<IDomainEventsDispatcher>();
 
         _unitOfWorkMock
             .Setup(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         _handler = new VerifyUserUseCaseHandler(
-            _publishEndpointMock.Object,
             _userRepositoryMock.Object,
-            _unitOfWorkMock.Object);
+            _unitOfWorkMock.Object,
+            _domainEventsDispatcherMock.Object);
     }
 
     [Fact]
@@ -52,9 +51,6 @@ public class VerifyUserUseCaseTests
 
         _userRepositoryMock
             .Verify(mock => mock.VerifyAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
-
-        _publishEndpointMock
-            .Verify(mock => mock.Publish(It.IsAny<CreateProfileEvent>(), It.IsAny<CancellationToken>()), Times.Never);
 
         _unitOfWorkMock
             .Verify(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -86,9 +82,6 @@ public class VerifyUserUseCaseTests
         _userRepositoryMock
             .Verify(mock => mock.VerifyAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
 
-        _publishEndpointMock
-            .Verify(mock => mock.Publish(It.IsAny<CreateProfileEvent>(), It.IsAny<CancellationToken>()), Times.Never);
-
         _unitOfWorkMock
             .Verify(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -119,9 +112,6 @@ public class VerifyUserUseCaseTests
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeEquivalentTo(UserErrors.UserVerificationFailed);
 
-        _publishEndpointMock
-            .Verify(mock => mock.Publish(It.IsAny<CreateProfileEvent>(), It.IsAny<CancellationToken>()), Times.Never);
-
         _unitOfWorkMock
             .Verify(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -150,14 +140,14 @@ public class VerifyUserUseCaseTests
             .Setup(mock => mock.VerifyAsync(user.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        _publishEndpointMock
-            .Setup(mock => mock.Publish(
-                It.Is<CreateProfileEvent>(@event =>
-                    @event.CorrelationId == user.Id.ToString()
-                    && @event.UserId == user.Id
-                    && @event.Name == user.Metadata.Name),
-                It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+        //_publishEndpointMock
+        //    .Setup(mock => mock.Publish(
+        //        It.Is<CreateProfileEvent>(@event =>
+        //            @event.CorrelationId == user.Id.ToString()
+        //            && @event.UserId == user.Id
+        //            && @event.Name == user.Metadata.Name),
+        //        It.IsAny<CancellationToken>()))
+        //    .Returns(Task.CompletedTask);
 
         // Act
         var result = await _handler.HandleAsync(request, default);

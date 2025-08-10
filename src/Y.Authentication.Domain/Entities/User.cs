@@ -12,6 +12,7 @@ public class User : Entity
     public string? ResetPasswordToken { get; }
 
     public UserMetadata? Metadata { get; set; }
+    public UserRole[] Roles { get; set; } = [];
 
     private static string CreateRandomToken() => Convert.ToHexString(RandomNumberGenerator.GetBytes(64));
 }

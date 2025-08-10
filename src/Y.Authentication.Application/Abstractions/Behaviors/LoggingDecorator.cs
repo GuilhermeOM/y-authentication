@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using Serilog.Context;
 using Y.Authentication.Application.Abstractions.Messaging;
+using Y.Authentication.Domain.DomainEvents.Base;
 using Y.Authentication.Domain.Shared;
 
 namespace Y.Authentication.Application.Abstractions.Behaviors;
@@ -45,9 +46,8 @@ internal static class LoggingDecorator
         }
     }
 
-    internal sealed class UseCaseHandler<TRequest, TResponse>: IUseCaseHandler<TRequest, TResponse>
+    internal sealed class UseCaseHandler<TRequest, TResponse> : IUseCaseHandler<TRequest, TResponse>
         where TRequest : IUseCase<TResponse>
-        where TResponse : class
     {
         private readonly IUseCaseHandler<TRequest, TResponse> _innerHandler;
         private readonly ILogger<UseCaseHandler<TRequest, TResponse>> _logger;
@@ -82,6 +82,41 @@ internal static class LoggingDecorator
                 }
             }
             return result;
+        }
+    }
+
+    internal sealed class DomainEventHandler<TDomainEvent> : IDomainEventHandler<TDomainEvent> where TDomainEvent : IDomainEvent
+    {
+        private readonly IDomainEventHandler<TDomainEvent> _innerHandler;
+        private readonly ILogger<DomainEventHandler<TDomainEvent>> _logger;
+
+        public DomainEventHandler(
+            IDomainEventHandler<TDomainEvent> innerHandler,
+            ILogger<DomainEventHandler<TDomainEvent>> logger)
+        {
+            _innerHandler = innerHandler;
+            _logger = logger;
+        }
+
+        public async Task HandleAsync(TDomainEvent domainEvent, CancellationToken cancellationToken = default)
+        {
+            var domainEventName = typeof(TDomainEvent).Name;
+
+            using var _ = LogContext.PushProperty("DomainEventName", domainEventName);
+
+            try
+            {
+                _logger.LogInformation("Processing domain event {DomainEventName}", domainEventName);
+
+                await _innerHandler.HandleAsync(domainEvent, cancellationToken);
+
+                _logger.LogInformation("Completed domain event {DomainEventName}", domainEventName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing domain event {DomainEventName}", domainEventName);
+                throw;
+            }
         }
     }
 }

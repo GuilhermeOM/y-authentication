@@ -1,25 +1,25 @@
-﻿using MassTransit;
-using Y.Authentication.Application.Abstractions.Messaging;
+﻿using Y.Authentication.Application.Abstractions.Messaging;
+using Y.Authentication.Domain.DomainEvents;
+using Y.Authentication.Domain.DomainEvents.Base;
 using Y.Authentication.Domain.Errors;
 using Y.Authentication.Domain.Repositories;
 using Y.Authentication.Domain.Shared;
-using Y.Contract.Root.Core.Events;
 
 namespace Y.Authentication.Application.Users.UseCases.VerifyUser;
 internal sealed class VerifyUserUseCaseHandler : IUseCaseHandler<VerifyUserUseCase>
 {
-    private readonly IPublishEndpoint _publishEndpoint;
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IDomainEventsDispatcher _domainEventsDispatcher;
 
     public VerifyUserUseCaseHandler(
-        IPublishEndpoint publishEndpoint,
         IUserRepository userRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IDomainEventsDispatcher domainEventsDispatcher)
     {
-        _publishEndpoint = publishEndpoint;
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
+        _domainEventsDispatcher = domainEventsDispatcher;
     }
 
     public async Task<Result> HandleAsync(VerifyUserUseCase request, CancellationToken cancellationToken = default)
@@ -42,18 +42,11 @@ internal sealed class VerifyUserUseCaseHandler : IUseCaseHandler<VerifyUserUseCa
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        await SendCreateProfileEventAsync(user.Id, user.Metadata?.Name, cancellationToken);
+
+        await _domainEventsDispatcher.DispatchAsync(
+            [new CreateUserProfileDomainEvent(user.Id, user.Metadata?.Name ?? string.Empty)],
+            cancellationToken);
 
         return Result.Success();
-    }
-
-    private async Task SendCreateProfileEventAsync(Guid userId, string? name, CancellationToken cancellationToken = default)
-    {
-        await _publishEndpoint.Publish(new CreateProfileEvent
-        {
-            CorrelationId = userId.ToString(),
-            UserId = userId,
-            Name = name ?? string.Empty
-        }, cancellationToken);
     }
 }

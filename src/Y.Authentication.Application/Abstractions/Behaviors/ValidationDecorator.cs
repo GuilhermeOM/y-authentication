@@ -36,7 +36,6 @@ internal static class ValidationDecorator
 
     internal sealed class ValidationHandler<TRequest, TResponse> : IUseCaseHandler<TRequest, TResponse>
         where TRequest : IUseCase<TResponse>
-        where TResponse : class
     {
         private readonly IUseCaseHandler<TRequest, TResponse> _innerHandler;
         private readonly IEnumerable<IValidator<TRequest>> _validators;

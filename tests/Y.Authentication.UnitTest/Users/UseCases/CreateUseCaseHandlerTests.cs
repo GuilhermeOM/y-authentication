@@ -1,52 +1,43 @@
 ﻿using FluentAssertions;
-using MassTransit;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Y.Authentication.Application.Users.UseCases.CreateUser;
+using Y.Authentication.Domain.DomainEvents;
+using Y.Authentication.Domain.DomainEvents.Base;
 using Y.Authentication.Domain.Entities;
 using Y.Authentication.Domain.Errors;
 using Y.Authentication.Domain.Repositories;
-using Y.Authentication.Domain.Shared;
 using Y.Contract.Root.Notification.Events;
-using Y.Contract.Root.Notification.Shared;
 
 namespace Y.Authentication.UnitTest.Users.UseCases;
 public class CreateUseCaseHandlerTests
 {
     private readonly Mock<ILogger<CreateUserUseCaseHandler>> _loggerMock;
-    private readonly Mock<IPublishEndpoint> _publishEndpointMock;
     private readonly Mock<IUserRepository> _userRepositoryMock;
     private readonly Mock<IUserMetadataRepository> _userMetadataRepositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
-    private readonly Mock<IHttpContextAccessor> _httpContextAccessorMock;
+    private readonly Mock<IDomainEventsDispatcher> _domainEventsDispatcherMock;
 
     private readonly CreateUserUseCaseHandler _handler;
 
     public CreateUseCaseHandlerTests()
     {
         _loggerMock = new Mock<ILogger<CreateUserUseCaseHandler>>();
-        _publishEndpointMock = new Mock<IPublishEndpoint>();
         _userRepositoryMock = new Mock<IUserRepository>();
         _userMetadataRepositoryMock = new Mock<IUserMetadataRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
-        _httpContextAccessorMock = new Mock<IHttpContextAccessor>();
+        _domainEventsDispatcherMock = new Mock<IDomainEventsDispatcher>();
 
         _unitOfWorkMock
             .Setup(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        _httpContextAccessorMock
-            .Setup(mock => mock.HttpContext)
-            .Returns(new DefaultHttpContext());
-
         _handler = new CreateUserUseCaseHandler(
             _loggerMock.Object,
-            _publishEndpointMock.Object,
             _userRepositoryMock.Object,
             _userMetadataRepositoryMock.Object,
             _unitOfWorkMock.Object,
-            _httpContextAccessorMock.Object);
+            _domainEventsDispatcherMock.Object);
     }
 
     [Fact]
@@ -68,6 +59,10 @@ public class CreateUseCaseHandlerTests
 
         _unitOfWorkMock
             .Verify(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+
+        _domainEventsDispatcherMock.Verify(mock => mock.DispatchAsync(
+            It.IsAny<IEnumerable<IDomainEvent>>(),
+            It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -91,11 +86,12 @@ public class CreateUseCaseHandlerTests
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeEquivalentTo(UserErrors.UserCreationFailed);
 
-        _publishEndpointMock
-            .Verify(mock => mock.Publish(It.IsAny<SendEmailEvent>(), It.IsAny<CancellationToken>()), Times.Never);
-
         _unitOfWorkMock
             .Verify(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+
+        _domainEventsDispatcherMock.Verify(mock => mock.DispatchAsync(
+            It.IsAny<IEnumerable<IDomainEvent>>(),
+            It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -125,11 +121,12 @@ public class CreateUseCaseHandlerTests
         result.IsFailure.Should().BeTrue();
         result.Error.Should().BeEquivalentTo(UserMetadataErrors.UserMetadataCreationFailed);
 
-        _publishEndpointMock
-            .Verify(mock => mock.Publish(It.IsAny<SendEmailEvent>(), It.IsAny<CancellationToken>()), Times.Never);
-
         _unitOfWorkMock
             .Verify(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+
+        _domainEventsDispatcherMock.Verify(mock => mock.DispatchAsync(
+            It.IsAny<IEnumerable<IDomainEvent>>(),
+            It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -163,14 +160,31 @@ public class CreateUseCaseHandlerTests
         _unitOfWorkMock
             .Verify(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
 
-        _publishEndpointMock
-            .Verify(mock => mock.Publish(
-                It.Is<SendEmailEvent>(@event =>
-                    @event.Email == request.Email
-                    && @event.Template == EmailTemplate.ACCOUNT_VERIFICATION
-                    && ContainsRequiredProperties(@event.Properties, request)),
-                It.IsAny<IPipe<PublishContext<SendEmailEvent>>>(),
-                It.IsAny<CancellationToken>()), Times.Once);
+        _domainEventsDispatcherMock.Verify(mock => mock.DispatchAsync(
+            It.Is<IEnumerable<IDomainEvent>>(domainEvents => AreDomainEventsValid(domainEvents, createdUserId)),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    public static bool AreDomainEventsValid(IEnumerable<IDomainEvent> domainEvents, Guid userId)
+    {
+        var domainEventsAmount = domainEvents.Count();
+        if (domainEventsAmount != 2)
+        {
+            return false;
+        }
+
+        if (domainEvents.First() is not CreateUserRoleDomainEvent createUserRoleDomainEvent
+            || domainEvents.Last() is not SendUserEmailVerificationDomainEvent sendUserEmailVerificationDomainEvent)
+        {
+            return false;
+        }
+
+        return createUserRoleDomainEvent.UserId == userId
+            && createUserRoleDomainEvent.Role == Contract.Root.Authentication.Shared.Role.User
+            && sendUserEmailVerificationDomainEvent.UserId == userId
+            && sendUserEmailVerificationDomainEvent.Email is not null
+            && sendUserEmailVerificationDomainEvent.UserName is not null
+            && sendUserEmailVerificationDomainEvent.VerificationToken is not null;
     }
 
     public static CreateUserUseCase CreateRequest() => new()
@@ -180,12 +194,4 @@ public class CreateUseCaseHandlerTests
         Name = "name",
         BirthDate = DateOnly.FromDateTime(DateTime.Now)
     };
-
-    private static bool ContainsRequiredProperties(Dictionary<string, string> properties, CreateUserUseCase request)
-    {
-        return properties.ContainsKey("VerificationLink")
-            && properties["VerificationLink"] is not null
-            && properties.ContainsKey("UserName")
-            && properties["UserName"] == (request.Name ?? string.Empty);
-    }
 }
