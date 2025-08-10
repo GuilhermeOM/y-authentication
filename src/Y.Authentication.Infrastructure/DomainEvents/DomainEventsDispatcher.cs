@@ -25,11 +25,12 @@ internal sealed class DomainEventsDispatcher(IServiceProvider serviceProvider) :
 
             var handler = scope.ServiceProvider.GetService(handlerType);
 
-            if (handler is null) continue;
+            if (handler is not null)
+            {
+                var handlerWrapper = HandlerWrapper.Create(handler, domainEventType);
+                await handlerWrapper.Handle(domainEvent, cancellationToken);
+            }
 
-            var handlerWrapper = HandlerWrapper.Create(handler, domainEventType);
-
-            await handlerWrapper.Handle(domainEvent, cancellationToken);
         }
     }
 
