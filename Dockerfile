@@ -2,13 +2,20 @@
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 USER app
 WORKDIR /app
-EXPOSE 8080
-EXPOSE 8081
-
+EXPOSE 5000
+EXPOSE 5001
 
 # Esta fase é usada para compilar o projeto de serviço
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+ARG NUGET_USERNAME
+ARG NUGET_PASSWORD
 ARG BUILD_CONFIGURATION=Release
+
+ENV NUGET_USERNAME=${NUGET_USERNAME}
+ENV NUGET_PASSWORD=${NUGET_PASSWORD}
+
+RUN dotnet nuget add source --username ${NUGET_USERNAME} --password ${NUGET_PASSWORD} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/GuilhermeOM/index.json"
+
 WORKDIR /src
 COPY ["./src/Y.Authentication.Api/Y.Authentication.Api.csproj", "src/Y.Authentication.Api/"]
 COPY ["./src/Y.Authentication.Application/Y.Authentication.Application.csproj", "src/Y.Authentication.Application/"]
