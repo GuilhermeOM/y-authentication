@@ -1,14 +1,4 @@
 services:
-  # y_authentication_api:
-  #   image: y_authentication_api
-  #   container_name: y_authentication_api
-  #   labels:
-  #     log_collect: "true"
-  #   build: .
-  #   ports:
-  #     - 8080:8080
-  #   networks:
-  #     - loki
   alloy:
     image: grafana/alloy:latest
     ports:
@@ -23,6 +13,7 @@ services:
       - loki
     networks:
       - loki
+
   loki:
     image: grafana/loki:latest
     ports:
@@ -32,6 +23,7 @@ services:
     command: -config.file=/etc/loki/local-config.yaml
     networks:
       - loki
+
   grafana:
     image: grafana/grafana:latest
     environment:
@@ -65,7 +57,3 @@ services:
 
 networks:
     loki:
-
-
-
-
