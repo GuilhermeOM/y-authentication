@@ -24,13 +24,11 @@ internal sealed class DomainEventsDispatcher(IServiceProvider serviceProvider) :
                 et => typeof(IDomainEventHandler<>).MakeGenericType(et));
 
             var handler = scope.ServiceProvider.GetService(handlerType);
-
             if (handler is not null)
             {
                 var handlerWrapper = HandlerWrapper.Create(handler, domainEventType);
                 await handlerWrapper.Handle(domainEvent, cancellationToken);
             }
-
         }
     }
 
