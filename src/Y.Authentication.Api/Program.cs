@@ -1,5 +1,10 @@
 using System.Globalization;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using Serilog;
+using Swashbuckle.AspNetCore.Filters;
 using Y.Authentication.Api.Middlewares;
 using Y.Authentication.Application;
 using Y.Authentication.Infrastructure;
@@ -33,8 +38,33 @@ try
 
     builder.Services.AddHttpContextAccessor();
 
+    builder.Services
+        .AddAuthorization()
+        .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
+        {
+            options.RequireHttpsMetadata = false;
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]!)),
+                ValidIssuer = builder.Configuration["Jwt:Issuer"],
+                ValidAudience = builder.Configuration["Jwt:Audience"],
+                ClockSkew = TimeSpan.Zero
+            };
+        });
+
     builder.Services.AddEndpointsApiExplorer();
-    builder.Services.AddSwaggerGen();
+    builder.Services.AddSwaggerGen(options =>
+    {
+        options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
+        {
+            In = ParameterLocation.Header,
+            Name = "Authorization",
+            Type = SecuritySchemeType.ApiKey
+        });
+
+        options.OperationFilter<SecurityRequirementsOperationFilter>();
+    });
 
     var app = builder.Build();
 
@@ -44,9 +74,11 @@ try
         app.UseSwaggerUI();
     }
 
+    app.UseMiddleware<LoggingCorrelationMiddleware>();
+
     app.UseHttpsRedirection();
 
-    app.UseMiddleware<LoggingCorrelationMiddleware>();
+    app.UseAuthentication();
 
     app.UseAuthorization();
 

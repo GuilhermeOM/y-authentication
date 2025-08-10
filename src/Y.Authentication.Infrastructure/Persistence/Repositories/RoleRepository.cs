@@ -12,11 +12,6 @@ internal sealed class RoleRepository : IRoleRepository
         _context = context;
     }
 
-    public async Task<IEnumerable<Role>> GetAllAsync(CancellationToken cancellationToken = default)
-    {
-        return await _context.Roles.AsNoTracking().ToListAsync(cancellationToken);
-    }
-
     public async Task<Role?> GetByNameAsync(string name, CancellationToken cancellationToken = default)
     {
         return await _context.Roles.AsNoTracking().FirstOrDefaultAsync(role => role.Name == name, cancellationToken);

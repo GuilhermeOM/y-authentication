@@ -7,6 +7,9 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
 {
     public void Configure(EntityTypeBuilder<User> builder)
     {
+        builder.Property(prop => prop.Email).IsRequired();
+        builder.Property(prop => prop.VerificationToken).IsRequired();
+
         builder.HasIndex(prop => prop.Email)
             .IsUnique();
 

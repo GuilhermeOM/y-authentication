@@ -1,7 +1,7 @@
 ﻿using FluentValidation;
 
 namespace Y.Authentication.Application.Users.UseCases.VerifyUser;
-internal sealed class VerifyUserValidator : AbstractValidator<VerifyUserUseCase>
+public sealed class VerifyUserValidator : AbstractValidator<VerifyUserUseCase>
 {
     public VerifyUserValidator()
     {

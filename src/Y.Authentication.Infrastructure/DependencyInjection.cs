@@ -4,9 +4,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Y.Authentication.Domain.DomainEvents.Base;
 using Y.Authentication.Domain.Repositories;
+using Y.Authentication.Domain.Services.Auth;
 using Y.Authentication.Infrastructure.DomainEvents;
 using Y.Authentication.Infrastructure.Persistence;
 using Y.Authentication.Infrastructure.Persistence.Repositories;
+using Y.Authentication.Infrastructure.Services.Auth;
 using Y.Contract.Root.Notification.Events;
 
 namespace Y.Authentication.Infrastructure;
@@ -15,10 +17,19 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         return services
+            .AddOptions(configuration)
             .AddPersistence(configuration)
             .AddRepositories()
+            .AddServices()
             .AddDomainEventsDispatcher()
             .AddRabbitMQ(configuration);
+    }
+
+    public static IServiceCollection AddOptions(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<AuthOptions>(c => configuration.GetSection("Jwt").Bind(c));
+
+        return services;
     }
 
     private static IServiceCollection AddPersistence(this IServiceCollection services, IConfiguration configuration)
@@ -38,6 +49,12 @@ public static class DependencyInjection
         services.AddScoped<IUserRoleRepository, UserRoleRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
 
+        return services;
+    }
+
+    private static IServiceCollection AddServices(this IServiceCollection services)
+    {
+        services.AddScoped<IAuthService, AuthService>();
         return services;
     }
 
@@ -67,14 +84,14 @@ public static class DependencyInjection
                     hostConfiguration.Password(password);
                 });
 
-                HandlePublisherTopology(cfg, context);
+                HandlePublisherTopology(cfg);
             });
         });
 
         return services;
     }
 
-    private static void HandlePublisherTopology(IRabbitMqBusFactoryConfigurator configurator, IBusRegistrationContext context)
+    private static void HandlePublisherTopology(IRabbitMqBusFactoryConfigurator configurator)
     {
         configurator.Message<SendEmailEvent>(topology => topology.SetEntityName(SendEmailEvent.Exchange));
         configurator.Publish<SendEmailEvent>(topology => topology.ExchangeType = "direct");

@@ -7,6 +7,8 @@ internal sealed class UserMetadataConfiguration : IEntityTypeConfiguration<UserM
 {
     public void Configure(EntityTypeBuilder<UserMetadata> builder)
     {
+        builder.Property(prop => prop.BirthDate).IsRequired();
+
         builder.HasOne(entity => entity.User)
             .WithOne(entity => entity.Metadata)
             .HasForeignKey<UserMetadata>(userMetadata => userMetadata.UserId)
