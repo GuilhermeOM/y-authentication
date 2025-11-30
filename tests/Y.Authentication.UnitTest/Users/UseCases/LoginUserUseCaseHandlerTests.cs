@@ -31,7 +31,7 @@ public class LoginUserUseCaseHandlerTests
         var request = new LoginUserUseCase("dummy@dummy.com", "dummypassword");
 
         _userRepositoryMock
-            .Setup(mock => mock.GetWithRolesByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
+            .Setup(mock => mock.GetWithMetadataRolesByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
             .ReturnsAsync(default(User));
 
         // Act
@@ -58,7 +58,7 @@ public class LoginUserUseCaseHandlerTests
         };
 
         _userRepositoryMock
-            .Setup(mock => mock.GetWithRolesByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
+            .Setup(mock => mock.GetWithMetadataRolesByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
         // Act
@@ -87,7 +87,7 @@ public class LoginUserUseCaseHandlerTests
         };
 
         _userRepositoryMock
-            .Setup(mock => mock.GetWithRolesByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
+            .Setup(mock => mock.GetWithMetadataRolesByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
         // Act
@@ -133,7 +133,7 @@ public class LoginUserUseCaseHandlerTests
         };
 
         _userRepositoryMock
-            .Setup(mock => mock.GetWithRolesByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
+            .Setup(mock => mock.GetWithMetadataRolesByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
         var authToken = new AuthToken("Bearer", "dummyJwt", DateTime.UtcNow.AddHours(1));

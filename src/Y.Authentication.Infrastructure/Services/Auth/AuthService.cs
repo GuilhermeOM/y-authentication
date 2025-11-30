@@ -30,6 +30,8 @@ internal sealed class AuthService : IAuthService
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(JwtRegisteredClaimNames.Email, user.Email),
+            new(JwtRegisteredClaimNames.Name, user.Metadata?.Name ?? "Unknown"),
+            new(JwtRegisteredClaimNames.Birthdate, user.Metadata?.BirthDate.ToString("yyyy-MM-dd") ?? string.Empty), 
             new("verifiedAt", user.VerifiedAt.ToString() ?? string.Empty)
         };
 

@@ -4,10 +4,17 @@ using Y.Authentication.Application.Abstractions.Messaging;
 using Y.Authentication.Domain.DomainEvents.Base;
 
 namespace Y.Authentication.Infrastructure.DomainEvents;
-internal sealed class DomainEventsDispatcher(IServiceProvider serviceProvider) : IDomainEventsDispatcher
+internal sealed class DomainEventsDispatcher: IDomainEventsDispatcher
 {
     private static readonly ConcurrentDictionary<Type, Type> _handlerTypeDictionary = new();
     private static readonly ConcurrentDictionary<Type, Type> _wrapperTypeDictionary = new();
+
+    private readonly IServiceProvider _serviceProvider;
+
+    public DomainEventsDispatcher(IServiceProvider serviceProvider)
+    {
+        _serviceProvider = serviceProvider;
+    }
 
     public async Task DispatchAsync(
         IEnumerable<IDomainEvent> domainEvents,
@@ -15,7 +22,7 @@ internal sealed class DomainEventsDispatcher(IServiceProvider serviceProvider) :
     {
         foreach (var domainEvent in domainEvents)
         {
-            using var scope = serviceProvider.CreateScope();
+            using var scope = _serviceProvider.CreateScope();
 
             var domainEventType = domainEvent.GetType();
 
