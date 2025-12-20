@@ -40,7 +40,7 @@ public class UserController : ApiController
     }
 
     [HttpPost("login")]
-    public async Task<IActionResult> LoginAsync([FromQuery] LoginUserUseCase request, CancellationToken cancellationToken)
+    public async Task<IActionResult> LoginAsync([FromBody] LoginUserUseCase request, CancellationToken cancellationToken)
     {
         var response = await _loginUserUseCaseHandler.HandleAsync(request, cancellationToken);
         return response.IsFailure ? HandleFailure(response) : Ok(response.Value);

@@ -2,9 +2,8 @@ using System.Globalization;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
+using Scalar.AspNetCore;
 using Serilog;
-using Swashbuckle.AspNetCore.Filters;
 using Y.Authentication.Api.Middlewares;
 using Y.Authentication.Application;
 using Y.Authentication.Infrastructure;
@@ -54,24 +53,14 @@ try
         });
 
     builder.Services.AddEndpointsApiExplorer();
-    builder.Services.AddSwaggerGen(options =>
-    {
-        options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
-        {
-            In = ParameterLocation.Header,
-            Name = "Authorization",
-            Type = SecuritySchemeType.ApiKey
-        });
-
-        options.OperationFilter<SecurityRequirementsOperationFilter>();
-    });
+    builder.Services.AddOpenApi();
 
     var app = builder.Build();
 
     if (app.Environment.IsDevelopment())
     {
-        app.UseSwagger();
-        app.UseSwaggerUI();
+        app.MapOpenApi();
+        app.MapScalarApiReference();
     }
 
     app.UseMiddleware<LoggingCorrelationMiddleware>();
