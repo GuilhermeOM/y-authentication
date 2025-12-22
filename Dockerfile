@@ -1,12 +1,12 @@
 # Esta fase é usada durante a execução no VS no modo rápido (Padrão para a configuração de Depuração)
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 USER app
 WORKDIR /app
 EXPOSE 5000
 EXPOSE 5001
 
 # Esta fase é usada para compilar o projeto de serviço
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG NUGET_USERNAME
 ARG NUGET_PASSWORD
 ARG BUILD_CONFIGURATION=Release
