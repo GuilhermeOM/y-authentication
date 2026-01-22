@@ -1,18 +1,24 @@
 ﻿using Y.Authentication.Application.Abstractions.Messaging;
 using Y.Authentication.Domain.Errors;
 using Y.Authentication.Domain.Repositories;
-using Y.Authentication.Domain.Services.Auth;
+using Y.Authentication.Domain.Services;
 using Y.Authentication.Domain.Shared;
+using Y.Authentication.Domain.ValueObjects;
 
 namespace Y.Authentication.Application.Users.UseCases.LoginUser;
 internal sealed class LoginUserUseCaseHandler : IUseCaseHandler<LoginUserUseCase, AuthToken>
 {
     private readonly IAuthService _authService;
+    private readonly IPasswordHasherService _passwordHasherService;
     private readonly IUserRepository _userRepository;
 
-    public LoginUserUseCaseHandler(IAuthService authService, IUserRepository userRepository)
+    public LoginUserUseCaseHandler(
+        IAuthService authService,
+        IPasswordHasherService passwordHasherService,
+        IUserRepository userRepository)
     {
         _authService = authService;
+        _passwordHasherService = passwordHasherService;
         _userRepository = userRepository;
     }
 
@@ -24,7 +30,7 @@ internal sealed class LoginUserUseCaseHandler : IUseCaseHandler<LoginUserUseCase
             return Result.Failure<AuthToken>(UserErrors.UserNotFound);
         }
 
-        if (!user.IsPasswordValid(request.Password))
+        if (!_passwordHasherService.IsPasswordSequenceEqual(request.Password, user.PasswordSalt, user.PasswordHash))
         {
             return Result.Failure<AuthToken>(UserErrors.UserPasswordNotValid);
         }

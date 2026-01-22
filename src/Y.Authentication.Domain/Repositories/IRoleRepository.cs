@@ -1,4 +1,4 @@
-﻿using Y.Authentication.Domain.Entities;
+﻿using Y.Authentication.Domain.Aggregates.Role;
 
 namespace Y.Authentication.Domain.Repositories;
 public interface IRoleRepository

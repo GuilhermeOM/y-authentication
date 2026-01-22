@@ -2,8 +2,8 @@
 using MassTransit;
 using Moq;
 using Y.Authentication.Application.Users.UseCases.VerifyUser;
+using Y.Authentication.Domain.Aggregates.User;
 using Y.Authentication.Domain.DomainEvents.Base;
-using Y.Authentication.Domain.Entities;
 using Y.Authentication.Domain.Errors;
 using Y.Authentication.Domain.Repositories;
 

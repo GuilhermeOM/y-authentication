@@ -2,9 +2,9 @@
 using Microsoft.Extensions.Logging;
 using Moq;
 using Y.Authentication.Application.Users.UseCases.CreateUser;
+using Y.Authentication.Domain.Aggregates.User;
 using Y.Authentication.Domain.DomainEvents;
 using Y.Authentication.Domain.DomainEvents.Base;
-using Y.Authentication.Domain.Entities;
 using Y.Authentication.Domain.Errors;
 using Y.Authentication.Domain.Repositories;
 using Y.Contract.Root.Notification.Events;
@@ -14,7 +14,6 @@ public class CreateUseCaseHandlerTests
 {
     private readonly Mock<ILogger<CreateUserUseCaseHandler>> _loggerMock;
     private readonly Mock<IUserRepository> _userRepositoryMock;
-    private readonly Mock<IUserMetadataRepository> _userMetadataRepositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<IDomainEventsDispatcher> _domainEventsDispatcherMock;
 

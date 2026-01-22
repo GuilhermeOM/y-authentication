@@ -3,12 +3,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Y.Authentication.Domain.DomainEvents.Base;
+using Y.Authentication.Domain.Options;
 using Y.Authentication.Domain.Repositories;
-using Y.Authentication.Domain.Services.Auth;
+using Y.Authentication.Domain.Services;
 using Y.Authentication.Infrastructure.DomainEvents;
 using Y.Authentication.Infrastructure.Persistence;
 using Y.Authentication.Infrastructure.Persistence.Repositories;
-using Y.Authentication.Infrastructure.Services.Auth;
+using Y.Authentication.Infrastructure.Services;
 using Y.Contract.Root.Notification.Events;
 
 namespace Y.Authentication.Infrastructure;
@@ -45,8 +46,6 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IUserMetadataRepository, UserMetadataRepository>();
-        services.AddScoped<IUserRoleRepository, UserRoleRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
 
         return services;
@@ -55,6 +54,7 @@ public static class DependencyInjection
     private static IServiceCollection AddServices(this IServiceCollection services)
     {
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IPasswordHasherService, PasswordHasherService>();
         return services;
     }
 

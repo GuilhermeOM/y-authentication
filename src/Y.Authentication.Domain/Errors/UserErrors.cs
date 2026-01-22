@@ -1,9 +1,18 @@
 ﻿using System.Net;
+using Y.Authentication.Domain.Aggregates.User;
 using Y.Authentication.Domain.Shared;
 
 namespace Y.Authentication.Domain.Errors;
 public static class UserErrors
 {
+    public static Error EmptyUserEmail => new("EMPTY_USER_EMAIL", "User email can not be empty");
+    public static Error EmptyUserRole => new("EMPTY_USER_ROLE", "User role can not be empty");
+    public static Error EmptyUser => new("EMPTY_USER", "User can not be empty");
+    public static Error EmptyPassword => new("EMPTY_PASSWORD", "Password can not be empty");
+
+    public static Error UserNameLengthExceeded => new(HttpStatusCode.BadRequest, "USER_NAME_LENGTH_EXCEEDED", $"User name must be lower or equal {UserMetadata.UserNameMaxLength} characters");
+    public static Error UserRoleNotFound => new(HttpStatusCode.InternalServerError, "USER_ROLE_NOT_FOUND", "User role not found");
+    public static Error UserRoleAlreadyExists => new(HttpStatusCode.Conflict, "USER_ROLE_ALREADY_EXISTS", "User role already exists");
     public static Error UserAlreadyExists => new(HttpStatusCode.Conflict, "USER_ALREADY_EXISTS", "User already exists");
     public static Error UserCreationFailed => new(HttpStatusCode.InternalServerError, "USER_CREATION_FAILED", "User creation failed");
     public static Error UserNotFound => new(HttpStatusCode.NotFound, "USER_NOT_FOUND", "User not found");

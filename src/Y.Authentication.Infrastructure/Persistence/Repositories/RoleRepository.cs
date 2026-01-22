@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Y.Authentication.Domain.Entities;
+using Y.Authentication.Domain.Aggregates.Role;
 using Y.Authentication.Domain.Repositories;
 
 namespace Y.Authentication.Infrastructure.Persistence.Repositories;

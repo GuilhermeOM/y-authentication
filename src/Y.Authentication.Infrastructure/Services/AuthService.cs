@@ -3,10 +3,12 @@ using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
-using Y.Authentication.Domain.Entities;
-using Y.Authentication.Domain.Services.Auth;
+using Y.Authentication.Domain.Aggregates.User;
+using Y.Authentication.Domain.Options;
+using Y.Authentication.Domain.Services;
+using Y.Authentication.Domain.ValueObjects;
 
-namespace Y.Authentication.Infrastructure.Services.Auth;
+namespace Y.Authentication.Infrastructure.Services;
 internal sealed class AuthService : IAuthService
 {
     private readonly AuthOptions _authOptions;

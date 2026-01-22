@@ -3,10 +3,10 @@ using System.Text;
 using FluentAssertions;
 using Moq;
 using Y.Authentication.Application.Users.UseCases.LoginUser;
-using Y.Authentication.Domain.Entities;
+using Y.Authentication.Domain.Aggregates.User;
 using Y.Authentication.Domain.Errors;
 using Y.Authentication.Domain.Repositories;
-using Y.Authentication.Domain.Services.Auth;
+using Y.Authentication.Domain.Services;
 
 namespace Y.Authentication.UnitTest.Users.UseCases;
 public class LoginUserUseCaseHandlerTests

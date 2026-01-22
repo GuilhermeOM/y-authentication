@@ -1,33 +1,35 @@
-﻿using System.Security.Cryptography;
-using System.Text;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Y.Authentication.Application.Abstractions.Messaging;
-using Y.Authentication.Domain.DomainEvents;
+using Y.Authentication.Domain.Aggregates.User;
 using Y.Authentication.Domain.DomainEvents.Base;
-using Y.Authentication.Domain.Entities;
 using Y.Authentication.Domain.Errors;
 using Y.Authentication.Domain.Repositories;
+using Y.Authentication.Domain.Services;
 using Y.Authentication.Domain.Shared;
+using Y.Contract.Root.Authentication.Shared;
 
 namespace Y.Authentication.Application.Users.UseCases.CreateUser;
 internal sealed class CreateUserUseCaseHandler : IUseCaseHandler<CreateUserUseCase>
 {
     private readonly ILogger<CreateUserUseCaseHandler> _logger;
+    private readonly IPasswordHasherService _passwordHasherService;
+    private readonly IRoleRepository _roleRepository;
     private readonly IUserRepository _userRepository;
-    private readonly IUserMetadataRepository _userMetadataRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IDomainEventsDispatcher _domainEventsDispatcher;
 
     public CreateUserUseCaseHandler(
         ILogger<CreateUserUseCaseHandler> logger,
+        IPasswordHasherService passwordHasherService,
+        IRoleRepository roleRepository,
         IUserRepository userRepository,
-        IUserMetadataRepository userMetadataRepository,
         IUnitOfWork unitOfWork,
         IDomainEventsDispatcher domainEventsDispatcher)
     {
         _logger = logger;
+        _passwordHasherService = passwordHasherService;
+        _roleRepository = roleRepository;
         _userRepository = userRepository;
-        _userMetadataRepository = userMetadataRepository;
         _unitOfWork = unitOfWork;
         _domainEventsDispatcher = domainEventsDispatcher;
     }
@@ -40,50 +42,36 @@ internal sealed class CreateUserUseCaseHandler : IUseCaseHandler<CreateUserUseCa
             return Result.Failure(UserErrors.UserAlreadyExists);
         }
 
-        CreatePasswordHash(request.Password, out var passwordHash, out var passwordSalt);
-
-        var user = new User
+        var userRole = await _roleRepository.GetByNameAsync(Role.User.ToString(), cancellationToken);
+        if (userRole is null)
         {
-            Email = request.Email,
-            PasswordHash = passwordHash,
-            PasswordSalt = passwordSalt,
-        };
-
-        var createdUserId = await _userRepository.CreateAsync(user, cancellationToken);
-        if (createdUserId == Guid.Empty)
-        {
-            return Result.Failure(UserErrors.UserCreationFailed);
+            return Result.Failure(UserErrors.UserRoleNotFound);
         }
 
-        var metadata = new UserMetadata
-        {
-            UserId = createdUserId,
-            Name = request.Name,
-            BirthDate = request.BirthDate,
-        };
+        var (PasswordSalt, PasswordHash) = _passwordHasherService.HashPassword(request.Password);
 
-        var createdUserMetadataId = await _userMetadataRepository.CreateAsync(metadata, cancellationToken);
-        if (createdUserMetadataId == Guid.Empty)
+        var userResult = User.Create(
+            request.Email,
+            PasswordSalt,
+            PasswordHash,
+            request.Name,
+            request.BirthDate,
+            userRole.Id);
+
+        if (userResult.IsFailure)
         {
-            return Result.Failure(UserMetadataErrors.UserMetadataCreationFailed);
+            return Result.Failure(userResult.Error);
         }
+
+        await _userRepository.CreateAsync(userResult.Value, cancellationToken);
+        await _userRepository.CreateMetadataAsync(userResult.Value.Metadata!, cancellationToken);
+        await _userRepository.CreateRoleAsync(userResult.Value.Roles.First(), cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _domainEventsDispatcher.DispatchAsync(userResult.Value.GetDomainEvents(), cancellationToken);
 
-        await _domainEventsDispatcher.DispatchAsync(
-            [new CreateUserRoleDomainEvent(createdUserId, Contract.Root.Authentication.Shared.Role.User),
-            new SendUserEmailVerificationDomainEvent(createdUserId, user.Email, user.VerificationToken, metadata.Name ?? string.Empty)],
-            cancellationToken);
-
-        _logger.LogInformation("User {UserId} successfully created", createdUserId);
+        _logger.LogInformation("User {UserId} successfully created", userResult.Value.Id);
 
         return Result.Success();
-    }
-
-    private static void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
-    {
-        using var hmac = new HMACSHA512();
-        passwordSalt = hmac.Key;
-        passwordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
     }
 }
