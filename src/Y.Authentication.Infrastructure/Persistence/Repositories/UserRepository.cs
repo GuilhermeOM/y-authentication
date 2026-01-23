@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Y.Authentication.Domain.Entities;
+using Y.Authentication.Domain.Aggregates.User;
 using Y.Authentication.Domain.Repositories;
 
 namespace Y.Authentication.Infrastructure.Persistence.Repositories;
@@ -20,21 +20,25 @@ internal sealed class UserRepository : IUserRepository
     public async Task<User?> GetWithMetadataRolesByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
         return await _context.Users
-            .Where(user => user.Email == email)
+            .AsNoTracking()
             .Include(user => user.Metadata)
             .Include(user => user.Roles)
             .ThenInclude(userRole => userRole.Role)
-            .AsNoTracking()
-            .FirstOrDefaultAsync(cancellationToken);
+            .SingleOrDefaultAsync(user => user.Email == email, cancellationToken);
     }
 
     public async Task<User?> GetWithMetadataByVerificationTokenAsync(string verificationToken, CancellationToken cancellationToken = default)
     {
         return await _context.Users
-            .Where(user => user.VerificationToken == verificationToken)
-            .Include(user => user.Metadata)
             .AsNoTracking()
-            .FirstOrDefaultAsync(cancellationToken);
+            .Include(user => user.Metadata)
+            .SingleOrDefaultAsync(user => user.VerificationToken == verificationToken, cancellationToken);
+    }
+
+    public async Task<User?> TrackByVerificationTokenAsync(string verificationToken, CancellationToken cancellationToken = default)
+    {
+        return await _context.Users
+            .SingleAsync(user => user.VerificationToken == verificationToken, cancellationToken);
     }
 
     public async Task<Guid> CreateAsync(User user, CancellationToken cancellationToken = default)
@@ -43,20 +47,15 @@ internal sealed class UserRepository : IUserRepository
         return user.Id;
     }
 
-    public async Task<bool> VerifyAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<Guid> CreateMetadataAsync(UserMetadata userMetadata, CancellationToken cancellationToken = default)
     {
-        var user = await _context.Users
-            .Where(user => user.Id == id && user.VerifiedAt == null)
-            .FirstOrDefaultAsync(cancellationToken);
+        await _context.UsersMetadata.AddAsync(userMetadata, cancellationToken);
+        return userMetadata.Id;
+    }
 
-        if (user is null)
-        {
-            return false;
-        }
-
-        var currentUtcTime = DateTime.UtcNow;
-        user.VerifiedAt = currentUtcTime;
-        user.UpdatedAt = currentUtcTime;
-        return true;
+    public async Task<Guid> CreateRoleAsync(UserRole userRole, CancellationToken cancellationToken = default)
+    {
+        await _context.UsersRoles.AddAsync(userRole, cancellationToken);
+        return userRole.Id;
     }
 }

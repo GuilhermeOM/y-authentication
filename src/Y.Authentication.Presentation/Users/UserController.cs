@@ -4,7 +4,7 @@ using Y.Authentication.Application.Users.UseCases.CreateUser;
 using Y.Authentication.Application.Users.UseCases.LoginUser;
 using Y.Authentication.Application.Users.UseCases.VerifyUser;
 using Y.Authentication.Domain.Constants;
-using Y.Authentication.Domain.Services.Auth;
+using Y.Authentication.Domain.ValueObjects;
 
 namespace Y.Authentication.Presentation.Users;
 

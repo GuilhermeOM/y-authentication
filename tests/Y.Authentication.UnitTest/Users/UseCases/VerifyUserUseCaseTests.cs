@@ -1,11 +1,12 @@
 ﻿using FluentAssertions;
-using MassTransit;
 using Moq;
 using Y.Authentication.Application.Users.UseCases.VerifyUser;
+using Y.Authentication.Domain.Aggregates.User;
+using Y.Authentication.Domain.DomainEvents;
 using Y.Authentication.Domain.DomainEvents.Base;
-using Y.Authentication.Domain.Entities;
 using Y.Authentication.Domain.Errors;
 using Y.Authentication.Domain.Repositories;
+using Y.Authentication.UnitTest.Fixtures;
 
 namespace Y.Authentication.UnitTest.Users.UseCases;
 public class VerifyUserUseCaseTests
@@ -39,7 +40,7 @@ public class VerifyUserUseCaseTests
         var request = new VerifyUserUseCase("dummy");
 
         _userRepositoryMock
-            .Setup(mock => mock.GetWithMetadataByVerificationTokenAsync(request.VerificationToken, It.IsAny<CancellationToken>()))
+            .Setup(mock => mock.TrackByVerificationTokenAsync(request.VerificationToken, It.IsAny<CancellationToken>()))
             .ReturnsAsync(default(User));
 
         // Act
@@ -50,7 +51,7 @@ public class VerifyUserUseCaseTests
         result.Error.Should().BeEquivalentTo(UserErrors.UserNotFound);
 
         _userRepositoryMock
-            .Verify(mock => mock.VerifyAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+            .Verify(mock => mock.TrackByVerificationTokenAsync(request.VerificationToken, It.IsAny<CancellationToken>()), Times.Once);
 
         _unitOfWorkMock
             .Verify(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -61,15 +62,11 @@ public class VerifyUserUseCaseTests
     {
         // Arrange
         var request = new VerifyUserUseCase("dummy");
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Email = "dummy@email.com",
-            VerifiedAt = DateTime.UtcNow,
-        };
+        var user = UserFixture.CreateValid();
+        user.Verify();
 
         _userRepositoryMock
-            .Setup(mock => mock.GetWithMetadataByVerificationTokenAsync(request.VerificationToken, It.IsAny<CancellationToken>()))
+            .Setup(mock => mock.TrackByVerificationTokenAsync(request.VerificationToken, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
         // Act
@@ -80,37 +77,7 @@ public class VerifyUserUseCaseTests
         result.Error.Should().BeEquivalentTo(UserErrors.UserAlreadyVerified);
 
         _userRepositoryMock
-            .Verify(mock => mock.VerifyAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
-
-        _unitOfWorkMock
-            .Verify(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task HandleAsyc_ShouldReturnVerificationFailed_WhenVerifyAsyncFails()
-    {
-        // Arrange
-        var request = new VerifyUserUseCase("dummy");
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Email = "dummy@email.com",
-        };
-
-        _userRepositoryMock
-            .Setup(mock => mock.GetWithMetadataByVerificationTokenAsync(request.VerificationToken, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(user);
-
-        _userRepositoryMock
-            .Setup(mock => mock.VerifyAsync(user.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
-
-        // Act
-        var result = await _handler.HandleAsync(request, default);
-
-        // Assert
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeEquivalentTo(UserErrors.UserVerificationFailed);
+            .Verify(mock => mock.TrackByVerificationTokenAsync(user.VerificationToken, It.IsAny<CancellationToken>()), Times.Never);
 
         _unitOfWorkMock
             .Verify(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -121,33 +88,17 @@ public class VerifyUserUseCaseTests
     {
         // Arrange
         var request = new VerifyUserUseCase("dummy");
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Email = "dummy@email.com",
-            Metadata = new UserMetadata
-            {
-                Name = "dummy",
-                BirthDate = DateOnly.FromDateTime(DateTime.UtcNow)
-            }
-        };
+        var user = UserFixture.CreateValid();
 
         _userRepositoryMock
-            .Setup(mock => mock.GetWithMetadataByVerificationTokenAsync(request.VerificationToken, It.IsAny<CancellationToken>()))
+            .Setup(mock => mock.TrackByVerificationTokenAsync(request.VerificationToken, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
-        _userRepositoryMock
-            .Setup(mock => mock.VerifyAsync(user.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
-        //_publishEndpointMock
-        //    .Setup(mock => mock.Publish(
-        //        It.Is<CreateProfileEvent>(@event =>
-        //            @event.CorrelationId == user.Id.ToString()
-        //            && @event.UserId == user.Id
-        //            && @event.Name == user.Metadata.Name),
-        //        It.IsAny<CancellationToken>()))
-        //    .Returns(Task.CompletedTask);
+        _domainEventsDispatcherMock
+            .Setup(mock => mock.DispatchAsync(
+                It.Is<List<IDomainEvent>>(events => AreDomainEventsWellDispatched(events, user)),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         // Act
         var result = await _handler.HandleAsync(request, default);
@@ -157,5 +108,16 @@ public class VerifyUserUseCaseTests
 
         _unitOfWorkMock
             .Verify(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+
+        user.VerifiedAt.Should().NotBeNull();
+    }
+
+    private static bool AreDomainEventsWellDispatched(List<IDomainEvent> events, User user)
+    {
+        var createUserProfileDomainEvent = events.OfType<CreateUserProfileDomainEvent>().FirstOrDefault();
+
+        return events.Count == 1
+            && createUserProfileDomainEvent?.UserId == user.Id
+            && createUserProfileDomainEvent?.UserName == (user.Metadata?.Name ?? string.Empty);
     }
 }

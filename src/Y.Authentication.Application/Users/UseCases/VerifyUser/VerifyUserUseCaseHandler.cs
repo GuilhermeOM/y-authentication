@@ -1,5 +1,4 @@
 ﻿using Y.Authentication.Application.Abstractions.Messaging;
-using Y.Authentication.Domain.DomainEvents;
 using Y.Authentication.Domain.DomainEvents.Base;
 using Y.Authentication.Domain.Errors;
 using Y.Authentication.Domain.Repositories;
@@ -24,28 +23,20 @@ internal sealed class VerifyUserUseCaseHandler : IUseCaseHandler<VerifyUserUseCa
 
     public async Task<Result> HandleAsync(VerifyUserUseCase request, CancellationToken cancellationToken = default)
     {
-        var user = await _userRepository.GetWithMetadataByVerificationTokenAsync(request.VerificationToken, cancellationToken);
+        var user = await _userRepository.TrackByVerificationTokenAsync(request.VerificationToken, cancellationToken);
         if (user is null)
         {
             return Result.Failure(UserErrors.UserNotFound);
         }
 
-        if (user.VerifiedAt is not null)
+        var verifyResult = user.Verify();
+        if (verifyResult.IsFailure)
         {
-            return Result.Failure(UserErrors.UserAlreadyVerified);
-        }
-
-        var didVerify = await _userRepository.VerifyAsync(user.Id, cancellationToken);
-        if (!didVerify)
-        {
-            return Result.Failure(UserErrors.UserVerificationFailed);
+            return Result.Failure(verifyResult.Error);
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        await _domainEventsDispatcher.DispatchAsync(
-            [new CreateUserProfileDomainEvent(user.Id, user.Metadata?.Name ?? string.Empty)],
-            cancellationToken);
+        await _domainEventsDispatcher.DispatchAsync(user.GetDomainEvents(), cancellationToken);
 
         return Result.Success();
     }

@@ -3,9 +3,9 @@ using System.Security.Claims;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
 using Moq;
-using Y.Authentication.Domain.Entities;
-using Y.Authentication.Domain.Services.Auth;
-using Y.Authentication.Infrastructure.Services.Auth;
+using Y.Authentication.Domain.Options;
+using Y.Authentication.Infrastructure.Services;
+using Y.Authentication.UnitTest.Fixtures;
 
 namespace Y.Authentication.UnitTest.Services;
 public class AuthServiceTests
@@ -35,11 +35,8 @@ public class AuthServiceTests
     public void CreateJwt_ShouldThrowInvalidOperationException_WhenUserHasNoRoles()
     {
         // Arrange
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Email = "dummyEmail",
-        };
+        var user = UserFixture.CreateValid();
+        user.Roles.Clear();
 
         // Act
         var action = () => _service.CreateJwt(user);
@@ -52,38 +49,8 @@ public class AuthServiceTests
     public void CreateJwt_ShouldReturnJwt()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var userRoleId = Guid.NewGuid();
-        var adminRoleId = Guid.NewGuid();
-        var user = new User
-        {
-            Id = userId,
-            Email = "dummy@dummy.com",
-            VerifiedAt = DateTime.UtcNow,
-            Roles =
-            [
-                new UserRole
-                {
-                    UserId = userId,
-                    RoleId = userRoleId,
-                    Role = new Role
-                    {
-                        Id = userRoleId,
-                        Name = Contract.Root.Authentication.Shared.Role.User.ToString()
-                    }
-                },
-                new UserRole
-                {
-                    UserId = userId,
-                    RoleId = adminRoleId,
-                    Role = new Role
-                    {
-                        Id = adminRoleId,
-                        Name = Contract.Root.Authentication.Shared.Role.Admin.ToString()
-                    }
-                }
-            ]
-        };
+        var user = UserFixture.CreateValidWithRoles();
+        user.Verify();
 
         // Act
         var jwt = _service.CreateJwt(user);

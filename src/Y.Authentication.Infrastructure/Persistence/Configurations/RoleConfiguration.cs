@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Y.Authentication.Domain.Entities;
+using Y.Authentication.Domain.Aggregates.Role;
 
 namespace Y.Authentication.Infrastructure.Persistence.Configurations;
 internal sealed class RoleConfiguration : IEntityTypeConfiguration<Role>

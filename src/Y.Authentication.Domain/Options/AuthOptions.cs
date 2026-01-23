@@ -1,4 +1,4 @@
-﻿namespace Y.Authentication.Domain.Services.Auth;
+﻿namespace Y.Authentication.Domain.Options;
 public sealed class AuthOptions
 {
     public string Secret { get; set; } = string.Empty;
