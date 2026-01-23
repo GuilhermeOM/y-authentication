@@ -30,7 +30,10 @@ internal sealed class LoginUserUseCaseHandler : IUseCaseHandler<LoginUserUseCase
             return Result.Failure<AuthToken>(UserErrors.UserNotFound);
         }
 
-        if (!_passwordHasherService.IsPasswordSequenceEqual(request.Password, user.PasswordSalt, user.PasswordHash))
+        var isPasswordCorrect = _passwordHasherService
+            .IsPasswordSequenceEqual(request.Password, user.PasswordSalt, user.PasswordHash);
+
+        if (!isPasswordCorrect)
         {
             return Result.Failure<AuthToken>(UserErrors.UserPasswordNotValid);
         }

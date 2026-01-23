@@ -35,7 +35,7 @@ internal sealed class UserRepository : IUserRepository
             .SingleOrDefaultAsync(user => user.VerificationToken == verificationToken, cancellationToken);
     }
 
-    public async Task<User> TrackByVerificationTokenAsync(string verificationToken, CancellationToken cancellationToken = default)
+    public async Task<User?> TrackByVerificationTokenAsync(string verificationToken, CancellationToken cancellationToken = default)
     {
         return await _context.Users
             .SingleAsync(user => user.VerificationToken == verificationToken, cancellationToken);

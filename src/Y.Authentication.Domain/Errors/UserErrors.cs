@@ -9,6 +9,7 @@ public static class UserErrors
     public static Error EmptyUserRole => new("EMPTY_USER_ROLE", "User role can not be empty");
     public static Error EmptyUser => new("EMPTY_USER", "User can not be empty");
     public static Error EmptyPassword => new("EMPTY_PASSWORD", "Password can not be empty");
+    public static Error UserMetadataWithoutUser => new("USER_METADATA_WITHOT_USER", "User metadata can not be created without user");
 
     public static Error UserNameLengthExceeded => new(HttpStatusCode.BadRequest, "USER_NAME_LENGTH_EXCEEDED", $"User name must be lower or equal {UserMetadata.UserNameMaxLength} characters");
     public static Error UserRoleNotFound => new(HttpStatusCode.InternalServerError, "USER_ROLE_NOT_FOUND", "User role not found");

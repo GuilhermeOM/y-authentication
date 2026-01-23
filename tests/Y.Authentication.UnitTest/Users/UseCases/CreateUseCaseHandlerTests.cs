@@ -1,18 +1,22 @@
-﻿using FluentAssertions;
+﻿using System.Text;
+using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Y.Authentication.Application.Users.UseCases.CreateUser;
+using Y.Authentication.Domain.Aggregates.Role;
 using Y.Authentication.Domain.Aggregates.User;
 using Y.Authentication.Domain.DomainEvents;
 using Y.Authentication.Domain.DomainEvents.Base;
 using Y.Authentication.Domain.Errors;
 using Y.Authentication.Domain.Repositories;
-using Y.Contract.Root.Notification.Events;
+using Y.Authentication.Domain.Services;
 
 namespace Y.Authentication.UnitTest.Users.UseCases;
 public class CreateUseCaseHandlerTests
 {
     private readonly Mock<ILogger<CreateUserUseCaseHandler>> _loggerMock;
+    private readonly Mock<IPasswordHasherService> _passwordHasherServiceMock;
+    private readonly Mock<IRoleRepository> _roleRepositoryMock;
     private readonly Mock<IUserRepository> _userRepositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<IDomainEventsDispatcher> _domainEventsDispatcherMock;
@@ -22,8 +26,9 @@ public class CreateUseCaseHandlerTests
     public CreateUseCaseHandlerTests()
     {
         _loggerMock = new Mock<ILogger<CreateUserUseCaseHandler>>();
+        _passwordHasherServiceMock = new Mock<IPasswordHasherService>();
+        _roleRepositoryMock = new Mock<IRoleRepository>();
         _userRepositoryMock = new Mock<IUserRepository>();
-        _userMetadataRepositoryMock = new Mock<IUserMetadataRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _domainEventsDispatcherMock = new Mock<IDomainEventsDispatcher>();
 
@@ -33,8 +38,9 @@ public class CreateUseCaseHandlerTests
 
         _handler = new CreateUserUseCaseHandler(
             _loggerMock.Object,
+            _passwordHasherServiceMock.Object,
+            _roleRepositoryMock.Object,
             _userRepositoryMock.Object,
-            _userMetadataRepositoryMock.Object,
             _unitOfWorkMock.Object,
             _domainEventsDispatcherMock.Object);
     }
@@ -44,6 +50,7 @@ public class CreateUseCaseHandlerTests
     {
         // Arrange
         var request = CreateRequest();
+        var userRoleName = Contract.Root.Authentication.Shared.Role.User.ToString();
 
         _userRepositoryMock
             .Setup(mock => mock.ExistsByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
@@ -65,25 +72,78 @@ public class CreateUseCaseHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_ShouldReturnFailure_WhenUserNotCreated()
+    public async Task HandleAsync_ShouldReturnFailure_WhenUserRoleNotFound()
     {
         // Arrange
         var request = CreateRequest();
+        var userRoleName = Contract.Root.Authentication.Shared.Role.User.ToString();
 
         _userRepositoryMock
             .Setup(mock => mock.ExistsByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
-        _userRepositoryMock
-            .Setup(mock => mock.CreateAsync(It.Is<User>(user => user.Email == request.Email), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Guid.Empty);
+        _roleRepositoryMock
+            .Setup(mock => mock.GetByNameAsync(
+                It.Is<string>(roleName => roleName == userRoleName),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(default(Role));
 
         // Act
         var result = await _handler.HandleAsync(request, default);
 
         // Assert
         result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeEquivalentTo(UserErrors.UserCreationFailed);
+        result.Error.Should().BeEquivalentTo(UserErrors.UserRoleNotFound);
+
+        _unitOfWorkMock
+            .Verify(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+
+        _domainEventsDispatcherMock.Verify(mock => mock.DispatchAsync(
+            It.IsAny<IEnumerable<IDomainEvent>>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleAsync_ShouldReturnFailure_WhenUserNotCreated()
+    {
+        // Arrange
+        var request = CreateRequest();
+        var userRoleName = Contract.Root.Authentication.Shared.Role.User.ToString();
+        var byteArrayMock = Encoding.ASCII.GetBytes(Guid.NewGuid().ToString());
+
+        _userRepositoryMock
+            .Setup(mock => mock.ExistsByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        _roleRepositoryMock
+            .Setup(mock => mock.GetByNameAsync(
+                It.Is<string>(roleName => roleName == userRoleName),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Role.Create(userRoleName).Value);
+
+        _passwordHasherServiceMock
+            .Setup(mock => mock.HashPassword(request.Password))
+            .Returns((byteArrayMock, byteArrayMock));
+
+        _userRepositoryMock
+            .Setup(mock => mock.CreateAsync(
+                It.Is<User>(user => user.Email == request.Email),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception());
+
+        // Act
+        var action = async () => await _handler.HandleAsync(request, default);
+
+        // Assert
+        await action.Should().ThrowExactlyAsync<Exception>();
+
+        _userRepositoryMock.Verify(mock => mock.CreateMetadataAsync(
+            It.IsAny<UserMetadata>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+
+        _userRepositoryMock.Verify(mock => mock.CreateRoleAsync(
+            It.IsAny<UserRole>(),
+            It.IsAny<CancellationToken>()), Times.Never);
 
         _unitOfWorkMock
             .Verify(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -98,27 +158,97 @@ public class CreateUseCaseHandlerTests
     {
         // Arrange
         var request = CreateRequest();
-
-        var createdUserId = Guid.NewGuid();
+        var userRoleName = Contract.Root.Authentication.Shared.Role.User.ToString();
+        var byteArrayMock = Encoding.ASCII.GetBytes(Guid.NewGuid().ToString());
 
         _userRepositoryMock
             .Setup(mock => mock.ExistsByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
-        _userRepositoryMock
-            .Setup(mock => mock.CreateAsync(It.Is<User>(user => user.Email == request.Email), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(createdUserId);
+        _roleRepositoryMock
+            .Setup(mock => mock.GetByNameAsync(
+                It.Is<string>(roleName => roleName == userRoleName),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Role.Create(userRoleName).Value);
 
-        _userMetadataRepositoryMock
-            .Setup(mock => mock.CreateAsync(It.Is<UserMetadata>(metadata => metadata.UserId == createdUserId && metadata.Name == request.Name), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Guid.Empty);
+        _passwordHasherServiceMock
+            .Setup(mock => mock.HashPassword(request.Password))
+            .Returns((byteArrayMock, byteArrayMock));
+
+        _userRepositoryMock
+            .Setup(mock => mock.CreateAsync(
+                It.Is<User>(user => user.Email == request.Email),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Guid.NewGuid());
+
+        _userRepositoryMock
+            .Setup(mock => mock.CreateMetadataAsync(
+                It.Is<UserMetadata>(metadata => metadata.UserId != Guid.Empty && metadata.Name == request.Name),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception());
 
         // Act
-        var result = await _handler.HandleAsync(request, default);
+        var action = async () => await _handler.HandleAsync(request, default);
 
         // Assert
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().BeEquivalentTo(UserMetadataErrors.UserMetadataCreationFailed);
+        await action.Should().ThrowAsync<Exception>();
+
+        _userRepositoryMock.Verify(mock => mock.CreateRoleAsync(
+            It.IsAny<UserRole>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+
+        _unitOfWorkMock
+            .Verify(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+
+        _domainEventsDispatcherMock.Verify(mock => mock.DispatchAsync(
+            It.IsAny<IEnumerable<IDomainEvent>>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleAsync_ShouldReturnFailure_WhenUserRoleNotCreated()
+    {
+        // Arrange
+        var request = CreateRequest();
+        var userRoleName = Contract.Root.Authentication.Shared.Role.User.ToString();
+        var byteArrayMock = Encoding.ASCII.GetBytes(Guid.NewGuid().ToString());
+
+        _userRepositoryMock
+            .Setup(mock => mock.ExistsByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        _roleRepositoryMock
+            .Setup(mock => mock.GetByNameAsync(
+                It.Is<string>(roleName => roleName == userRoleName),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Role.Create(userRoleName).Value);
+
+        _passwordHasherServiceMock
+            .Setup(mock => mock.HashPassword(request.Password))
+            .Returns((byteArrayMock, byteArrayMock));
+
+        _userRepositoryMock
+            .Setup(mock => mock.CreateAsync(
+                It.Is<User>(user => user.Email == request.Email), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Guid.NewGuid());
+
+        _userRepositoryMock
+            .Setup(mock => mock.CreateMetadataAsync(
+                It.Is<UserMetadata>(metadata => metadata.UserId != Guid.Empty && metadata.Name == request.Name),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Guid.NewGuid());
+
+        _userRepositoryMock
+            .Setup(mock => mock.CreateRoleAsync(
+                It.Is<UserRole>(role => role.UserId != Guid.Empty),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception());
+
+        // Act
+        var action = async () => await _handler.HandleAsync(request, default);
+
+        // Assert
+        await action.Should().ThrowAsync<Exception>();
 
         _unitOfWorkMock
             .Verify(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -133,22 +263,42 @@ public class CreateUseCaseHandlerTests
     {
         // Arrange
         var request = CreateRequest();
+        var byteArrayMock = Encoding.ASCII.GetBytes(Guid.NewGuid().ToString());
 
-        var createdUserId = Guid.NewGuid();
+        var createUserMetadataId = Guid.NewGuid();
+        var userRole = Role.Create(Contract.Root.Authentication.Shared.Role.User.ToString()).Value;
 
         _userRepositoryMock
             .Setup(mock => mock.ExistsByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
-        _userRepositoryMock
-            .Setup(mock => mock.CreateAsync(It.Is<User>(user => user.Email == request.Email), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(createdUserId);
+        _roleRepositoryMock
+            .Setup(mock => mock.GetByNameAsync(
+                It.Is<string>(roleName => roleName == userRole.Name),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(userRole);
 
-        _userMetadataRepositoryMock
-            .Setup(mock => mock.CreateAsync(It.Is<UserMetadata>(metadata => metadata.UserId == createdUserId && metadata.Name == request.Name), It.IsAny<CancellationToken>()))
+        _passwordHasherServiceMock
+            .Setup(mock => mock.HashPassword(request.Password))
+            .Returns((byteArrayMock, byteArrayMock));
+
+        _userRepositoryMock
+            .Setup(mock => mock.CreateAsync(
+                It.Is<User>(user => user.Email == request.Email),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(Guid.NewGuid());
 
-        var payload = It.IsAny<SendEmailEvent>();
+        _userRepositoryMock
+            .Setup(mock => mock.CreateMetadataAsync(
+                It.Is<UserMetadata>(metadata => metadata.UserId != Guid.Empty && metadata.Name == request.Name),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Guid.NewGuid());
+
+        _userRepositoryMock
+            .Setup(mock => mock.CreateRoleAsync(
+                It.Is<UserRole>(role => role.UserId != Guid.Empty && role.Id == userRole.Id),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(userRole.Id);
 
         // Act
         var result = await _handler.HandleAsync(request, default);
@@ -160,30 +310,18 @@ public class CreateUseCaseHandlerTests
             .Verify(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
 
         _domainEventsDispatcherMock.Verify(mock => mock.DispatchAsync(
-            It.Is<IEnumerable<IDomainEvent>>(domainEvents => AreDomainEventsValid(domainEvents, createdUserId)),
+            It.Is<IEnumerable<IDomainEvent>>(domainEvents => AreDomainEventsWellDispatched(domainEvents, request)),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    public static bool AreDomainEventsValid(IEnumerable<IDomainEvent> domainEvents, Guid userId)
+    private static bool AreDomainEventsWellDispatched(IEnumerable<IDomainEvent> events, CreateUserUseCase request)
     {
-        var domainEventsAmount = domainEvents.Count();
-        if (domainEventsAmount != 2)
-        {
-            return false;
-        }
+        var sendUserEmailVerificationDomainEvent = events.OfType<SendUserEmailVerificationDomainEvent>().FirstOrDefault();
 
-        if (domainEvents.First() is not CreateUserRoleDomainEvent createUserRoleDomainEvent
-            || domainEvents.Last() is not SendUserEmailVerificationDomainEvent sendUserEmailVerificationDomainEvent)
-        {
-            return false;
-        }
-
-        return createUserRoleDomainEvent.UserId == userId
-            && createUserRoleDomainEvent.Role == Contract.Root.Authentication.Shared.Role.User
-            && sendUserEmailVerificationDomainEvent.UserId == userId
-            && sendUserEmailVerificationDomainEvent.Email is not null
-            && sendUserEmailVerificationDomainEvent.UserName is not null
-            && sendUserEmailVerificationDomainEvent.VerificationToken is not null;
+        return sendUserEmailVerificationDomainEvent?.Email == request.Email
+            && sendUserEmailVerificationDomainEvent?.UserName == request.Name
+            && sendUserEmailVerificationDomainEvent?.UserId != Guid.Empty
+            && !string.IsNullOrWhiteSpace(sendUserEmailVerificationDomainEvent?.VerificationToken);
     }
 
     public static CreateUserUseCase CreateRequest() => new()

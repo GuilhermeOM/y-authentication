@@ -49,10 +49,8 @@ public class AuthServiceTests
     public void CreateJwt_ShouldReturnJwt()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var userRoleId = Guid.NewGuid();
-        var adminRoleId = Guid.NewGuid();
-        var user = UserFixture.CreateValid();
+        var user = UserFixture.CreateValidWithRoles();
+        user.Verify();
 
         // Act
         var jwt = _service.CreateJwt(user);

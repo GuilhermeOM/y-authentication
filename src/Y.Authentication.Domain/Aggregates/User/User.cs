@@ -69,7 +69,7 @@ public class User : AggregateRoot
 
     private Result SetMetadata(string? name, DateOnly birthDate)
     {
-        var userMetadataResult = UserMetadata.Create(name, birthDate);
+        var userMetadataResult = UserMetadata.Create(Id, name, birthDate);
         if (userMetadataResult.IsFailure)
         {
             return Result.Failure<UserMetadata>(userMetadataResult.Error);
@@ -98,7 +98,7 @@ public class User : AggregateRoot
 
     public Result Verify()
     {
-        if (VerifiedAt is null)
+        if (VerifiedAt is not null)
         {
             return Result.Failure(UserErrors.UserAlreadyVerified);
         }
@@ -108,7 +108,7 @@ public class User : AggregateRoot
         VerifiedAt = utcTime;
         UpdatedAt = utcTime;
 
-        RaiseDomainEvent(new CreateUserProfileDomainEvent(Id, Email));
+        RaiseDomainEvent(new CreateUserProfileDomainEvent(Id, Metadata?.Name ?? string.Empty));
 
         return Result.Success();
     }

@@ -12,21 +12,27 @@ public class UserMetadata : Entity
     public Guid UserId { get; private set; }
     public User User { get; private set; } = null!;
 
-    private UserMetadata(string name, DateOnly birthDate)
+    private UserMetadata(Guid userId, string name, DateOnly birthDate)
     {
+        UserId = userId;
         Name = name;
         BirthDate = birthDate;
     }
 
-    public static Result<UserMetadata> Create(string? name, DateOnly birthDate)
+    public static Result<UserMetadata> Create(Guid userId, string? name, DateOnly birthDate)
     {
         name ??= string.Empty;
+
+        if (userId == Guid.Empty)
+        {
+            return Result.Failure<UserMetadata>(UserErrors.UserMetadataWithoutUser);
+        }
 
         if (name.Length > UserNameMaxLength)
         {
             return Result.Failure<UserMetadata>(UserErrors.UserNameLengthExceeded);
         }
 
-        return Result.Success(new UserMetadata(name, birthDate));
+        return Result.Success(new UserMetadata(userId, name, birthDate));
     }
 }

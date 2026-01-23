@@ -1,17 +1,18 @@
-﻿using System.Security.Cryptography;
-using System.Text;
-using FluentAssertions;
+﻿using FluentAssertions;
 using Moq;
 using Y.Authentication.Application.Users.UseCases.LoginUser;
 using Y.Authentication.Domain.Aggregates.User;
 using Y.Authentication.Domain.Errors;
 using Y.Authentication.Domain.Repositories;
 using Y.Authentication.Domain.Services;
+using Y.Authentication.Domain.ValueObjects;
+using Y.Authentication.UnitTest.Fixtures;
 
 namespace Y.Authentication.UnitTest.Users.UseCases;
 public class LoginUserUseCaseHandlerTests
 {
     private readonly Mock<IAuthService> _authServiceMock;
+    private readonly Mock<IPasswordHasherService> _passwordHasherServiceMock;
     private readonly Mock<IUserRepository> _userRepositoryMock;
 
     private readonly LoginUserUseCaseHandler _handler;
@@ -19,9 +20,13 @@ public class LoginUserUseCaseHandlerTests
     public LoginUserUseCaseHandlerTests()
     {
         _authServiceMock = new Mock<IAuthService>();
+        _passwordHasherServiceMock = new Mock<IPasswordHasherService>();
         _userRepositoryMock = new Mock<IUserRepository>();
 
-        _handler = new LoginUserUseCaseHandler(_authServiceMock.Object, _userRepositoryMock.Object);
+        _handler = new LoginUserUseCaseHandler(
+            _authServiceMock.Object,
+            _passwordHasherServiceMock.Object,
+            _userRepositoryMock.Object);
     }
 
     [Fact]
@@ -47,26 +52,20 @@ public class LoginUserUseCaseHandlerTests
     {
         // Arrange
         var request = new LoginUserUseCase("dummy@dummy.com", "dummyWrongPass");
-
-        CreatePasswordHash("dummyCorrectPass", out var passwordHash, out var passwordSalt);
-
-        var user =  new User
-        {
-            Email = request.Email,
-            PasswordHash = passwordHash,
-            PasswordSalt = passwordSalt,
-        };
+        var user = UserFixture.CreateValid();
 
         _userRepositoryMock
             .Setup(mock => mock.GetWithMetadataRolesByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
+        _passwordHasherServiceMock
+            .Setup(mock => mock.IsPasswordSequenceEqual(request.Password, user.PasswordSalt, user.PasswordHash))
+            .Returns(false);
+
         // Act
         var response = await _handler.HandleAsync(request, default);
 
         // Assert
-        user.IsPasswordValid(request.Password).Should().BeFalse();
-
         response.IsFailure.Should().BeTrue();
         response.Error.Should().BeEquivalentTo(UserErrors.UserPasswordNotValid);
     }
@@ -76,26 +75,20 @@ public class LoginUserUseCaseHandlerTests
     {
         // Arrange
         var request = new LoginUserUseCase("dummy@dummy.com", "dummyCorrectPass");
-
-        CreatePasswordHash(request.Password, out var passwordHash, out var passwordSalt);
-
-        var user = new User
-        {
-            Email = request.Email,
-            PasswordHash = passwordHash,
-            PasswordSalt = passwordSalt,
-        };
+        var user = UserFixture.CreateValid();
 
         _userRepositoryMock
             .Setup(mock => mock.GetWithMetadataRolesByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
+        _passwordHasherServiceMock
+            .Setup(mock => mock.IsPasswordSequenceEqual(request.Password, user.PasswordSalt, user.PasswordHash))
+            .Returns(true);
+
         // Act
         var response = await _handler.HandleAsync(request, default);
 
         // Assert
-        user.IsPasswordValid(request.Password).Should().BeTrue();
-
         response.IsFailure.Should().BeTrue();
         response.Error.Should().BeEquivalentTo(UserErrors.UserNotVerified);
     }
@@ -105,36 +98,16 @@ public class LoginUserUseCaseHandlerTests
     {
         // Arrange
         var request = new LoginUserUseCase("dummy@dummy.com", "dummyCorrectPass");
-
-        CreatePasswordHash(request.Password, out var passwordHash, out var passwordSalt);
-
-        var userId = Guid.NewGuid();
-        var roleId = Guid.NewGuid();
-        var user = new User
-        {
-            Id = userId,
-            Email = request.Email,
-            PasswordHash = passwordHash,
-            PasswordSalt = passwordSalt,
-            VerifiedAt = DateTime.UtcNow,
-            Roles =
-            [
-                new UserRole
-                {
-                    UserId = userId,
-                    RoleId = roleId,
-                    Role = new Role
-                    {
-                        Id = roleId,
-                        Name = Contract.Root.Authentication.Shared.Role.User.ToString()
-                    }
-                }
-            ]
-        };
+        var user = UserFixture.CreateValid();
+        user.Verify();
 
         _userRepositoryMock
             .Setup(mock => mock.GetWithMetadataRolesByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
+
+        _passwordHasherServiceMock
+           .Setup(mock => mock.IsPasswordSequenceEqual(request.Password, user.PasswordSalt, user.PasswordHash))
+           .Returns(true);
 
         var authToken = new AuthToken("Bearer", "dummyJwt", DateTime.UtcNow.AddHours(1));
 
@@ -146,16 +119,7 @@ public class LoginUserUseCaseHandlerTests
         var response = await _handler.HandleAsync(request, default);
 
         // Assert
-        user.IsPasswordValid(request.Password).Should().BeTrue();
-
         response.IsSuccess.Should().BeTrue();
         response.Value.Should().BeEquivalentTo(authToken);
-    }
-
-    private static void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
-    {
-        using var hmac = new HMACSHA512();
-        passwordSalt = hmac.Key;
-        passwordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
     }
 }

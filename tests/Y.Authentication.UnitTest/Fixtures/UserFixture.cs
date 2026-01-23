@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using Y.Authentication.Domain.Aggregates.Role;
 using Y.Authentication.Domain.Aggregates.User;
 
 namespace Y.Authentication.UnitTest.Fixtures;
@@ -19,5 +20,24 @@ internal class UserFixture
         return userResult.IsSuccess
             ? userResult.Value
             : throw new InvalidOperationException("Could not create a valid user for the fixture.");
+    }
+
+    public static User CreateValidWithRoles()
+    {
+        var user = CreateValid();
+        HydrateRoles(user);
+        return user;
+    }
+
+    private static void HydrateRoles(User user)
+    {
+        foreach (var userRole in user.Roles)
+        {
+            var roleResult = Role.Create("Admin");
+            if (roleResult.IsSuccess)
+            {
+                userRole.Role = roleResult.Value;
+            }
+        }
     }
 }
