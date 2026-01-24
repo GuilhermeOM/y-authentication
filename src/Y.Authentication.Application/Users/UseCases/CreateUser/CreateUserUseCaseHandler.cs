@@ -52,8 +52,8 @@ internal sealed class CreateUserUseCaseHandler : IUseCaseHandler<CreateUserUseCa
 
         var userResult = User.Create(
             request.Email,
-            PasswordSalt,
             PasswordHash,
+            PasswordSalt,
             request.Name,
             request.BirthDate,
             userRole.Id);
