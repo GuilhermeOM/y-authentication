@@ -1,19 +1,19 @@
-﻿using MassTransit;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Y.Authentication.Application.Users.DomainEvents.SendUserEmailVerification;
+using Y.Authentication.Application.Users.DomainEvents;
 using Y.Authentication.Domain.Constants;
 using Y.Authentication.Domain.DomainEvents;
-using Y.Contract.Root.Notification.Events;
-using Y.Contract.Root.Notification.Shared;
+using Y.Authentication.Domain.Services;
+using Y.Contract.SharedKernel.Abstractions.Messaging;
+using Y.Contract.SharedKernel.Events;
 
 namespace Y.Authentication.UnitTest.Users.DomainEvents;
 public class SendUserEmailVerificationDomainEventHandlerTests
 {
     private readonly Mock<ILogger<SendUserEmailVerificationDomainEventHandler>> _loggerMock;
     private readonly Mock<IHttpContextAccessor> _httpContextAccessorMock;
-    private readonly Mock<IPublishEndpoint> _publishEndpointMock;
+    private readonly Mock<IProducerService> _producerService;
 
     private readonly SendUserEmailVerificationDomainEventHandler _handler;
 
@@ -21,7 +21,7 @@ public class SendUserEmailVerificationDomainEventHandlerTests
     {
         _loggerMock = new Mock<ILogger<SendUserEmailVerificationDomainEventHandler>>();
         _httpContextAccessorMock = new Mock<IHttpContextAccessor>();
-        _publishEndpointMock = new Mock<IPublishEndpoint>();
+        _producerService = new Mock<IProducerService>();
 
         _httpContextAccessorMock
             .Setup(mock => mock.HttpContext)
@@ -30,7 +30,7 @@ public class SendUserEmailVerificationDomainEventHandlerTests
         _handler = new SendUserEmailVerificationDomainEventHandler(
             _loggerMock.Object,
             _httpContextAccessorMock.Object,
-            _publishEndpointMock.Object);
+            _producerService.Object);
     }
 
     [Fact]
@@ -43,19 +43,22 @@ public class SendUserEmailVerificationDomainEventHandlerTests
         await _handler.HandleAsync(domainEvent, default);
 
         // Assert
-        _publishEndpointMock
-            .Verify(mock => mock.Publish(
-                It.Is<SendEmailEvent>(@event =>
-                    @event.Email == domainEvent.Email
-                    && @event.Template == EmailTemplate.AccountVerification
+        _producerService
+            .Verify(mock => mock.ProduceAsync(
+                It.Is<NotifyChannelEvent>(@event =>
+                    @event.Channel == Channel.Email
+                    && @event.EmailTemplate == EmailTemplate.AccountVerification
                     && ContainsRequiredProperties(@event.Properties, domainEvent)),
-                It.IsAny<IPipe<PublishContext<SendEmailEvent>>>(),
-                It.IsAny<CancellationToken>()), Times.Once);
+                It.Is<MessageMetadata>(metadata =>
+                    metadata.MessageKey == domainEvent.UserId.ToString()
+                    && metadata.Topic == KafkaConstants.Topics.NotifyChannelTopic)), Times.Once);
     }
 
     private static bool ContainsRequiredProperties(Dictionary<string, string> properties, SendUserEmailVerificationDomainEvent domainEvent)
     {
-        return properties.ContainsKey("VerificationLink")
+        return properties.ContainsKey("Email")
+            && properties["Email"] == domainEvent.Email
+            && properties.ContainsKey("VerificationLink")
             && properties["VerificationLink"].Contains($"api/user/{UserConstants.VerifyEndpoint}?VerificationToken")
             && properties.ContainsKey("UserName")
             && properties["UserName"] == (domainEvent.UserName ?? string.Empty);

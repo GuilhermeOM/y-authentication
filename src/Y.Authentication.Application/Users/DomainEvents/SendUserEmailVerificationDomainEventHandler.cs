@@ -1,47 +1,48 @@
-﻿using MassTransit;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Y.Authentication.Application.Abstractions.Messaging;
 using Y.Authentication.Domain.Constants;
 using Y.Authentication.Domain.DomainEvents;
-using Y.Contract.Root.Notification.Events;
-using Y.Contract.Root.Notification.Shared;
+using Y.Authentication.Domain.Services;
+using Y.Contract.SharedKernel.Abstractions.Messaging;
+using Y.Contract.SharedKernel.Events;
 
-namespace Y.Authentication.Application.Users.DomainEvents.SendUserEmailVerification;
+namespace Y.Authentication.Application.Users.DomainEvents;
 internal sealed class SendUserEmailVerificationDomainEventHandler : IDomainEventHandler<SendUserEmailVerificationDomainEvent>
 {
     private readonly ILogger<SendUserEmailVerificationDomainEventHandler> _logger;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IPublishEndpoint _publishEndpoint;
+    private readonly IProducerService _producerService;
 
     public SendUserEmailVerificationDomainEventHandler(
         ILogger<SendUserEmailVerificationDomainEventHandler>  logger,
         IHttpContextAccessor httpContextAccessor,
-        IPublishEndpoint publishEndpoint)
+        IProducerService producerService)
     {
         _logger = logger;
         _httpContextAccessor = httpContextAccessor;
-        _publishEndpoint = publishEndpoint;
+        _producerService = producerService;
     }
 
     public async Task HandleAsync(SendUserEmailVerificationDomainEvent domainEvent, CancellationToken cancellationToken = default)
     {
-        var @event = new SendEmailEvent
+        var @event = new NotifyChannelEvent
         {
-            CorrelationId = domainEvent.UserId.ToString(),
-            Email = domainEvent.Email,
-            Template = EmailTemplate.AccountVerification,
+            Channel = Channel.Email,
+            EmailTemplate = EmailTemplate.AccountVerification,
             Properties = new Dictionary<string, string>
             {
+                { "Email", domainEvent.Email },
                 { "VerificationLink", CreateAccountVerificationLink(domainEvent.VerificationToken) },
                 { "UserName", domainEvent.UserName ?? string.Empty }
             }
         };
 
-        await _publishEndpoint.Publish(@event, callback =>
+        await _producerService.ProduceAsync(@event, new MessageMetadata
         {
-            callback.SetRoutingKey(SendEmailEvent.RoutingKey);
-        }, cancellationToken);
+            MessageKey = domainEvent.UserId.ToString(),
+            Topic = KafkaConstants.Topics.NotifyChannelTopic,
+        });
     }
 
     private string CreateAccountVerificationLink(string verificationToken)

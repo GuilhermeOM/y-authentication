@@ -6,7 +6,7 @@ using Y.Authentication.Domain.Errors;
 using Y.Authentication.Domain.Repositories;
 using Y.Authentication.Domain.Services;
 using Y.Authentication.Domain.Shared;
-using Y.Contract.Root.Authentication.Shared;
+using Y.Contract.SharedKernel.Enums;
 
 namespace Y.Authentication.Application.Users.UseCases.CreateUser;
 internal sealed class CreateUserUseCaseHandler : IUseCaseHandler<CreateUserUseCase>

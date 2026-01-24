@@ -108,8 +108,6 @@ public class User : AggregateRoot
         VerifiedAt = utcTime;
         UpdatedAt = utcTime;
 
-        RaiseDomainEvent(new CreateUserProfileDomainEvent(Id, Metadata?.Name ?? string.Empty));
-
         return Result.Success();
     }
 }
