@@ -6,6 +6,7 @@ using Y.Authentication.Domain.DomainEvents.Base;
 using Y.Authentication.Domain.Options;
 using Y.Authentication.Domain.Repositories;
 using Y.Authentication.Domain.Services;
+using Y.Authentication.Infrastructure.Background;
 using Y.Authentication.Infrastructure.DomainEvents;
 using Y.Authentication.Infrastructure.Messasing;
 using Y.Authentication.Infrastructure.Persistence;
@@ -22,6 +23,7 @@ public static class DependencyInjection
             .AddOptions(configuration)
             .AddPersistence(configuration)
             .AddRepositories()
+            .AddBackgroundServices()
             .AddServices()
             .AddDomainEventsDispatcher()
             .AddPipelinePolicies()
@@ -49,6 +51,13 @@ public static class DependencyInjection
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
+
+        return services;
+    }
+
+    private static IServiceCollection AddBackgroundServices(this IServiceCollection services)
+    {
+        services.AddHostedService<RoleConfiguratorBackgroundService>();
 
         return services;
     }

@@ -22,4 +22,9 @@ internal sealed class RoleRepository : IRoleRepository
         await _context.Roles.AddAsync(role, cancellationToken);
         return role.Id;
     }
+
+    public async Task CreateManyAsync(IEnumerable<Role> roles, CancellationToken cancellationToken = default)
+    {
+        await _context.Roles.AddRangeAsync(roles, cancellationToken);
+    }
 }
