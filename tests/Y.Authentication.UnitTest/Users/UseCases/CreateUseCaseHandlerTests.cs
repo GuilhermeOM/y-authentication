@@ -10,6 +10,7 @@ using Y.Authentication.Domain.DomainEvents.Base;
 using Y.Authentication.Domain.Errors;
 using Y.Authentication.Domain.Repositories;
 using Y.Authentication.Domain.Services;
+using Y.Contract.SharedKernel.Enums;
 
 namespace Y.Authentication.UnitTest.Users.UseCases;
 public class CreateUseCaseHandlerTests
@@ -50,7 +51,7 @@ public class CreateUseCaseHandlerTests
     {
         // Arrange
         var request = CreateRequest();
-        var userRoleName = Contract.Root.Authentication.Shared.Role.User.ToString();
+        var userRoleName = Contract.SharedKernel.Enums.Role.User.ToString();
 
         _userRepositoryMock
             .Setup(mock => mock.ExistsByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
@@ -76,7 +77,7 @@ public class CreateUseCaseHandlerTests
     {
         // Arrange
         var request = CreateRequest();
-        var userRoleName = Contract.Root.Authentication.Shared.Role.User.ToString();
+        var userRoleName = Contract.SharedKernel.Enums.Role.User.ToString();
 
         _userRepositoryMock
             .Setup(mock => mock.ExistsByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
@@ -86,7 +87,7 @@ public class CreateUseCaseHandlerTests
             .Setup(mock => mock.GetByNameAsync(
                 It.Is<string>(roleName => roleName == userRoleName),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(default(Role));
+            .ReturnsAsync(default(Domain.Aggregates.Role.Role));
 
         // Act
         var result = await _handler.HandleAsync(request, default);
@@ -108,7 +109,7 @@ public class CreateUseCaseHandlerTests
     {
         // Arrange
         var request = CreateRequest();
-        var userRoleName = Contract.Root.Authentication.Shared.Role.User.ToString();
+        var userRoleName = Contract.SharedKernel.Enums.Role.User.ToString();
         var byteArrayMock = Encoding.ASCII.GetBytes(Guid.NewGuid().ToString());
 
         _userRepositoryMock
@@ -119,7 +120,7 @@ public class CreateUseCaseHandlerTests
             .Setup(mock => mock.GetByNameAsync(
                 It.Is<string>(roleName => roleName == userRoleName),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Role.Create(userRoleName).Value);
+            .ReturnsAsync(Domain.Aggregates.Role.Role.Create(userRoleName).Value);
 
         _passwordHasherServiceMock
             .Setup(mock => mock.HashPassword(request.Password))
@@ -158,7 +159,7 @@ public class CreateUseCaseHandlerTests
     {
         // Arrange
         var request = CreateRequest();
-        var userRoleName = Contract.Root.Authentication.Shared.Role.User.ToString();
+        var userRoleName = Contract.SharedKernel.Enums.Role.User.ToString();
         var byteArrayMock = Encoding.ASCII.GetBytes(Guid.NewGuid().ToString());
 
         _userRepositoryMock
@@ -169,7 +170,7 @@ public class CreateUseCaseHandlerTests
             .Setup(mock => mock.GetByNameAsync(
                 It.Is<string>(roleName => roleName == userRoleName),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Role.Create(userRoleName).Value);
+            .ReturnsAsync(Domain.Aggregates.Role.Role.Create(userRoleName).Value);
 
         _passwordHasherServiceMock
             .Setup(mock => mock.HashPassword(request.Password))
@@ -210,7 +211,7 @@ public class CreateUseCaseHandlerTests
     {
         // Arrange
         var request = CreateRequest();
-        var userRoleName = Contract.Root.Authentication.Shared.Role.User.ToString();
+        var userRoleName = Contract.SharedKernel.Enums.Role.User.ToString();
         var byteArrayMock = Encoding.ASCII.GetBytes(Guid.NewGuid().ToString());
 
         _userRepositoryMock
@@ -221,7 +222,7 @@ public class CreateUseCaseHandlerTests
             .Setup(mock => mock.GetByNameAsync(
                 It.Is<string>(roleName => roleName == userRoleName),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Role.Create(userRoleName).Value);
+            .ReturnsAsync(Domain.Aggregates.Role.Role.Create(userRoleName).Value);
 
         _passwordHasherServiceMock
             .Setup(mock => mock.HashPassword(request.Password))
@@ -266,7 +267,7 @@ public class CreateUseCaseHandlerTests
         var byteArrayMock = Encoding.ASCII.GetBytes(Guid.NewGuid().ToString());
 
         var createUserMetadataId = Guid.NewGuid();
-        var userRole = Role.Create(Contract.Root.Authentication.Shared.Role.User.ToString()).Value;
+        var userRole = Domain.Aggregates.Role.Role.Create(Contract.SharedKernel.Enums.Role.User.ToString()).Value;
 
         _userRepositoryMock
             .Setup(mock => mock.ExistsByEmailAsync(request.Email, It.IsAny<CancellationToken>()))

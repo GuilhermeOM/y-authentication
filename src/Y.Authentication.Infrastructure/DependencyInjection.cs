@@ -1,16 +1,18 @@
-﻿using MassTransit;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Polly;
 using Y.Authentication.Domain.DomainEvents.Base;
 using Y.Authentication.Domain.Options;
 using Y.Authentication.Domain.Repositories;
 using Y.Authentication.Domain.Services;
+using Y.Authentication.Infrastructure.Background;
 using Y.Authentication.Infrastructure.DomainEvents;
+using Y.Authentication.Infrastructure.Messasing;
 using Y.Authentication.Infrastructure.Persistence;
 using Y.Authentication.Infrastructure.Persistence.Repositories;
+using Y.Authentication.Infrastructure.Resilience;
 using Y.Authentication.Infrastructure.Services;
-using Y.Contract.Root.Notification.Events;
 
 namespace Y.Authentication.Infrastructure;
 public static class DependencyInjection
@@ -21,9 +23,11 @@ public static class DependencyInjection
             .AddOptions(configuration)
             .AddPersistence(configuration)
             .AddRepositories()
+            .AddBackgroundServices()
             .AddServices()
             .AddDomainEventsDispatcher()
-            .AddRabbitMQ(configuration);
+            .AddPipelinePolicies()
+            .ConfigureKafkaTopology(configuration);
     }
 
     public static IServiceCollection AddOptions(this IServiceCollection services, IConfiguration configuration)
@@ -51,10 +55,19 @@ public static class DependencyInjection
         return services;
     }
 
+    private static IServiceCollection AddBackgroundServices(this IServiceCollection services)
+    {
+        services.AddHostedService<RoleConfiguratorBackgroundService>();
+
+        return services;
+    }
+
     private static IServiceCollection AddServices(this IServiceCollection services)
     {
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IPasswordHasherService, PasswordHasherService>();
+        services.AddScoped<IProducerService, ProducerService>();
+
         return services;
     }
 
@@ -64,36 +77,10 @@ public static class DependencyInjection
         return services;
     }
 
-    private static IServiceCollection AddRabbitMQ(this IServiceCollection services, IConfiguration configuration)
+    private static IServiceCollection AddPipelinePolicies(this IServiceCollection services)
     {
-        services.AddMassTransit(registration =>
-        {
-            registration.SetKebabCaseEndpointNameFormatter();
-
-            var host = configuration["RabbitMQ:Host"]!;
-            var username = configuration["RabbitMQ:Username"]!;
-            var password = configuration["RabbitMQ:Password"]!;
-
-            registration.AddConsumers(typeof(AssemblyReference).Assembly);
-
-            registration.UsingRabbitMq((context, cfg) =>
-            {
-                cfg.Host(host, hostConfiguration =>
-                {
-                    hostConfiguration.Username(username);
-                    hostConfiguration.Password(password);
-                });
-
-                HandlePublisherTopology(cfg);
-            });
-        });
+        services.AddResiliencePipeline(Resiliences.FastDefaultRetryPipelinePolicy, builder => ResilienceBuilder.FastDefaultRetryPipelinePolicy(builder));
 
         return services;
-    }
-
-    private static void HandlePublisherTopology(IRabbitMqBusFactoryConfigurator configurator)
-    {
-        configurator.Message<SendEmailEvent>(topology => topology.SetEntityName(SendEmailEvent.Exchange));
-        configurator.Publish<SendEmailEvent>(topology => topology.ExchangeType = "direct");
     }
 }

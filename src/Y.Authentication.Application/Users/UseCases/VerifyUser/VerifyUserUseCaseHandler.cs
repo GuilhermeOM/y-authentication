@@ -1,5 +1,4 @@
 ﻿using Y.Authentication.Application.Abstractions.Messaging;
-using Y.Authentication.Domain.DomainEvents.Base;
 using Y.Authentication.Domain.Errors;
 using Y.Authentication.Domain.Repositories;
 using Y.Authentication.Domain.Shared;
@@ -9,16 +8,13 @@ internal sealed class VerifyUserUseCaseHandler : IUseCaseHandler<VerifyUserUseCa
 {
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IDomainEventsDispatcher _domainEventsDispatcher;
 
     public VerifyUserUseCaseHandler(
         IUserRepository userRepository,
-        IUnitOfWork unitOfWork,
-        IDomainEventsDispatcher domainEventsDispatcher)
+        IUnitOfWork unitOfWork)
     {
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
-        _domainEventsDispatcher = domainEventsDispatcher;
     }
 
     public async Task<Result> HandleAsync(VerifyUserUseCase request, CancellationToken cancellationToken = default)
@@ -36,8 +32,6 @@ internal sealed class VerifyUserUseCaseHandler : IUseCaseHandler<VerifyUserUseCa
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        await _domainEventsDispatcher.DispatchAsync(user.GetDomainEvents(), cancellationToken);
-
         return Result.Success();
     }
 }
