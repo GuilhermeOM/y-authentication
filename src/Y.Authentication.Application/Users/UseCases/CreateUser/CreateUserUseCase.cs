@@ -8,11 +8,14 @@ public sealed class CreateUserUseCase : IUseCase
 
     public required string Email { get; set; }
     public required string Password { get; set; }
+
     public string? Name
     {
         get => _name;
         set => _name = value is null ? null : CultureInfo.InvariantCulture.TextInfo.ToTitleCase(value.Trim());
     }
+
+    public string AvatarUrl { get; set; } = string.Empty;
     public DateOnly BirthDate { get; set; }
 }
 

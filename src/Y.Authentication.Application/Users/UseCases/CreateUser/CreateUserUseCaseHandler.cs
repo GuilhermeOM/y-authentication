@@ -55,6 +55,7 @@ internal sealed class CreateUserUseCaseHandler : IUseCaseHandler<CreateUserUseCa
             PasswordHash,
             PasswordSalt,
             request.Name,
+            request.AvatarUrl,
             request.BirthDate,
             userRole.Id);
 

@@ -30,6 +30,7 @@ public class User : AggregateRoot
         byte[] passwordHash,
         byte[] passwordSalt,
         string? name,
+        string? avatarUrl,
         DateOnly birthDate,
         Guid roleId)
     {
@@ -46,7 +47,7 @@ public class User : AggregateRoot
 
         var user = new User(email, passwordHash, passwordSalt);
 
-        var userSetMetadataResult = user.SetMetadata(name, birthDate);
+        var userSetMetadataResult = user.SetMetadata(name, avatarUrl, birthDate);
         if (userSetMetadataResult.IsFailure)
         {
             return Result.Failure<User>(userSetMetadataResult.Error);
@@ -67,9 +68,9 @@ public class User : AggregateRoot
         return Result.Success(user);
     }
 
-    private Result SetMetadata(string? name, DateOnly birthDate)
+    private Result SetMetadata(string? name, string? avatarUrl, DateOnly birthDate)
     {
-        var userMetadataResult = UserMetadata.Create(Id, name, birthDate);
+        var userMetadataResult = UserMetadata.Create(Id, name, avatarUrl, birthDate);
         if (userMetadataResult.IsFailure)
         {
             return Result.Failure<UserMetadata>(userMetadataResult.Error);
