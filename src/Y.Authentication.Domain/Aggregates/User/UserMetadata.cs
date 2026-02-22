@@ -7,35 +7,30 @@ public class UserMetadata : Entity
     public const int UserNameMaxLength = 50;
 
     public string Name { get; private set; } = string.Empty;
-    public string AvatarUrl { get; private set; } = string.Empty;
     public DateOnly BirthDate { get; private set; }
 
     public Guid UserId { get; private set; }
     public User User { get; private set; } = null!;
 
-    private UserMetadata(Guid userId, string name, string avatarUrl, DateOnly birthDate)
+    private UserMetadata(Guid userId, string? name, DateOnly birthDate)
     {
         UserId = userId;
-        Name = name;
-        AvatarUrl = avatarUrl;
+        Name = name ?? string.Empty;
         BirthDate = birthDate;
     }
 
-    public static Result<UserMetadata> Create(Guid userId, string? name, string? avatarUrl, DateOnly birthDate)
+    public static Result<UserMetadata> Create(Guid userId, string? name, DateOnly birthDate)
     {
-        name ??= string.Empty;
-        avatarUrl ??= string.Empty;
-
         if (userId == Guid.Empty)
         {
-            return Result.Failure<UserMetadata>(UserErrors.UserMetadataWithoutUser);
+            return Result.Failure<UserMetadata>(UserErrors.UserMetadataEmptyUser);
         }
 
-        if (name.Length > UserNameMaxLength)
+        if (name?.Length > UserNameMaxLength)
         {
             return Result.Failure<UserMetadata>(UserErrors.UserNameLengthExceeded);
         }
 
-        return Result.Success(new UserMetadata(userId, name, avatarUrl, birthDate));
+        return Result.Success(new UserMetadata(userId, name, birthDate));
     }
 }

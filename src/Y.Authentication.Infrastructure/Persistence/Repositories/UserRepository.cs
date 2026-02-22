@@ -38,7 +38,7 @@ internal sealed class UserRepository : IUserRepository
     public async Task<User?> TrackByVerificationTokenAsync(string verificationToken, CancellationToken cancellationToken = default)
     {
         return await _context.Users
-            .SingleAsync(user => user.VerificationToken == verificationToken, cancellationToken);
+            .SingleOrDefaultAsync(user => user.VerificationToken == verificationToken, cancellationToken);
     }
 
     public async Task<Guid> CreateAsync(User user, CancellationToken cancellationToken = default)
@@ -51,6 +51,12 @@ internal sealed class UserRepository : IUserRepository
     {
         await _context.UsersMetadata.AddAsync(userMetadata, cancellationToken);
         return userMetadata.Id;
+    }
+
+    public async Task<Guid> CreateAvatarAsync(UserAvatar userAvatar, CancellationToken cancellationToken = default)
+    {
+        await _context.UsersAvatar.AddAsync(userAvatar, cancellationToken);
+        return userAvatar.Id;
     }
 
     public async Task<Guid> CreateRoleAsync(UserRole userRole, CancellationToken cancellationToken = default)

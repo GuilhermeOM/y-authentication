@@ -2,6 +2,7 @@
 using Y.Authentication.Domain.DomainEvents;
 using Y.Authentication.Domain.Errors;
 using Y.Authentication.Domain.Shared;
+using Y.Authentication.Domain.ValueObjects;
 
 namespace Y.Authentication.Domain.Aggregates.User;
 public class User : AggregateRoot
@@ -14,6 +15,7 @@ public class User : AggregateRoot
     public string? ResetPasswordToken { get; }
 
     public UserMetadata? Metadata { get; private set; }
+    public UserAvatar? Avatar { get; private set; }
     public ICollection<UserRole> Roles { get; private set; } = [];
 
     private User(string email, byte[] passwordHash, byte[] passwordSalt)
@@ -26,31 +28,36 @@ public class User : AggregateRoot
     private static string CreateRandomToken() => Convert.ToHexString(RandomNumberGenerator.GetBytes(64));
 
     public static Result<User> Create(
+        PasswordHash passwordHash,
         string email,
-        byte[] passwordHash,
-        byte[] passwordSalt,
-        string? name,
-        string? avatarUrl,
         DateOnly birthDate,
-        Guid roleId)
+        Guid roleId,
+        string? name = null,
+        FileUpload? avatarUpload = null)
     {
         if (string.IsNullOrWhiteSpace(email))
         {
-            return Result.Failure<User>(UserErrors.EmptyUserEmail);
+            return Result.Failure<User>(UserErrors.UserEmptyEmail);
         }
 
-        if (passwordHash is null || passwordHash.Length == 0 || 
-            passwordSalt is null || passwordSalt.Length == 0)
+        if (passwordHash.Hash is null || passwordHash.Hash.Length == 0 ||
+            passwordHash.Salt is null || passwordHash.Salt.Length == 0)
         {
-            return Result.Failure<User>(UserErrors.EmptyPassword);
+            return Result.Failure<User>(UserErrors.UserEmptyPassword);
         }
 
-        var user = new User(email, passwordHash, passwordSalt);
+        var user = new User(email, passwordHash.Hash, passwordHash.Salt);
 
-        var userSetMetadataResult = user.SetMetadata(name, avatarUrl, birthDate);
+        var userSetMetadataResult = user.SetMetadata(name, birthDate);
         if (userSetMetadataResult.IsFailure)
         {
             return Result.Failure<User>(userSetMetadataResult.Error);
+        }
+
+        var userSetAvatarResult = user.SetAvatar(avatarUpload);
+        if (userSetAvatarResult.IsFailure)
+        {
+            return Result.Failure<User>(userSetAvatarResult.Error);
         }
 
         var addRoleResult = user.AddRole(roleId);
@@ -68,15 +75,32 @@ public class User : AggregateRoot
         return Result.Success(user);
     }
 
-    private Result SetMetadata(string? name, string? avatarUrl, DateOnly birthDate)
+    private Result SetMetadata(string? name, DateOnly birthDate)
     {
-        var userMetadataResult = UserMetadata.Create(Id, name, avatarUrl, birthDate);
+        var userMetadataResult = UserMetadata.Create(Id, name, birthDate);
         if (userMetadataResult.IsFailure)
         {
             return Result.Failure<UserMetadata>(userMetadataResult.Error);
         }
 
         Metadata = userMetadataResult.Value;
+        return Result.Success();
+    }
+
+    private Result SetAvatar(FileUpload? avatarUpload)
+    {
+        if (avatarUpload is null)
+        {
+            return Result.Success();
+        }
+
+        var userAvatarResult = UserAvatar.Create(Id, avatarUpload);
+        if (userAvatarResult.IsFailure)
+        {
+            return Result.Failure<UserAvatar>(userAvatarResult.Error);
+        }
+
+        Avatar = userAvatarResult.Value;
         return Result.Success();
     }
 

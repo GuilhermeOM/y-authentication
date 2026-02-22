@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using Microsoft.AspNetCore.Http;
 using Y.Authentication.Application.Abstractions.Messaging;
 
 namespace Y.Authentication.Application.Users.UseCases.CreateUser;
@@ -15,7 +16,7 @@ public sealed class CreateUserUseCase : IUseCase
         set => _name = value is null ? null : CultureInfo.InvariantCulture.TextInfo.ToTitleCase(value.Trim());
     }
 
-    public string AvatarUrl { get; set; } = string.Empty;
+    public IFormFile? AvatarPhoto { get; set; }
     public DateOnly BirthDate { get; set; }
 }
 

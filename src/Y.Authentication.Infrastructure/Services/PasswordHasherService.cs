@@ -1,17 +1,18 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 using Y.Authentication.Domain.Services;
+using Y.Authentication.Domain.ValueObjects;
 
 namespace Y.Authentication.Infrastructure.Services;
 internal sealed class PasswordHasherService : IPasswordHasherService
 {
-    public (byte[] Salt, byte[] Hash) HashPassword(string password)
+    public PasswordHash HashPassword(string password)
     {
         using var hmac = new HMACSHA512();
         var salt = hmac.Key;
         var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
 
-        return (salt, hash);
+        return new(salt, hash);
     }
 
     public bool IsPasswordSequenceEqual(string password, byte[] salt, byte[] hash)

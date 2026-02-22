@@ -6,6 +6,7 @@ using Scalar.AspNetCore;
 using Serilog;
 using Y.Authentication.Api.Middlewares;
 using Y.Authentication.Application;
+using Y.Authentication.Domain;
 using Y.Authentication.Infrastructure;
 
 var cultureInfo = CultureInfo.CreateSpecificCulture("en-US");
@@ -26,6 +27,7 @@ try
         .Enrich.FromLogContext());
 
     builder.Services
+        .AddDomain(builder.Configuration)
         .AddApplication(builder.Configuration)
         .AddInfrastructure(builder.Configuration);
 

@@ -10,10 +10,11 @@ internal class UserFixture
         var byteArrayMock = Encoding.ASCII.GetBytes(Guid.NewGuid().ToString());
 
         var userResult = User.Create(
-            email: "dummy@dummy.com",
             passwordHash: byteArrayMock,
             passwordSalt: byteArrayMock,
+            email: "dummy@dummy.com",
             name: "Dummy SurDummy",
+            avatarUrl: "",
             birthDate: DateOnly.MinValue,
             roleId: Guid.NewGuid());
 

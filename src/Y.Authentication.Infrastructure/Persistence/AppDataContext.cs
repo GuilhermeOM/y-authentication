@@ -11,6 +11,7 @@ internal class AppDataContext : DbContext
 
     public DbSet<User> Users { get; set; }
     public DbSet<UserMetadata> UsersMetadata { get; set; }
+    public DbSet<UserAvatar> UsersAvatar { get; set; }
     public DbSet<UserRole> UsersRoles { get; set; }
     public DbSet<Role> Roles { get; set; }
 

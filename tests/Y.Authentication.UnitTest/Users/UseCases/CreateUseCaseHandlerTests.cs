@@ -3,20 +3,19 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Y.Authentication.Application.Users.UseCases.CreateUser;
-using Y.Authentication.Domain.Aggregates.Role;
 using Y.Authentication.Domain.Aggregates.User;
 using Y.Authentication.Domain.DomainEvents;
 using Y.Authentication.Domain.DomainEvents.Base;
 using Y.Authentication.Domain.Errors;
 using Y.Authentication.Domain.Repositories;
 using Y.Authentication.Domain.Services;
-using Y.Contract.SharedKernel.Enums;
 
 namespace Y.Authentication.UnitTest.Users.UseCases;
 public class CreateUseCaseHandlerTests
 {
     private readonly Mock<ILogger<CreateUserUseCaseHandler>> _loggerMock;
     private readonly Mock<IPasswordHasherService> _passwordHasherServiceMock;
+    private readonly Mock<IStorageService> _storageServiceMock; 
     private readonly Mock<IRoleRepository> _roleRepositoryMock;
     private readonly Mock<IUserRepository> _userRepositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
@@ -28,6 +27,7 @@ public class CreateUseCaseHandlerTests
     {
         _loggerMock = new Mock<ILogger<CreateUserUseCaseHandler>>();
         _passwordHasherServiceMock = new Mock<IPasswordHasherService>();
+        _storageServiceMock = new Mock<IStorageService>();
         _roleRepositoryMock = new Mock<IRoleRepository>();
         _userRepositoryMock = new Mock<IUserRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
@@ -40,6 +40,7 @@ public class CreateUseCaseHandlerTests
         _handler = new CreateUserUseCaseHandler(
             _loggerMock.Object,
             _passwordHasherServiceMock.Object,
+            _storageServiceMock.Object,
             _roleRepositoryMock.Object,
             _userRepositoryMock.Object,
             _unitOfWorkMock.Object,
