@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using Y.Authentication.Domain.Aggregates.Role;
 using Y.Authentication.Domain.Aggregates.User;
+using Y.Authentication.Domain.ValueObjects;
 
 namespace Y.Authentication.UnitTest.Fixtures;
 internal class UserFixture
@@ -10,11 +11,9 @@ internal class UserFixture
         var byteArrayMock = Encoding.ASCII.GetBytes(Guid.NewGuid().ToString());
 
         var userResult = User.Create(
-            passwordHash: byteArrayMock,
-            passwordSalt: byteArrayMock,
+            new PasswordHash(byteArrayMock, byteArrayMock),
             email: "dummy@dummy.com",
             name: "Dummy SurDummy",
-            avatarUrl: "",
             birthDate: DateOnly.MinValue,
             roleId: Guid.NewGuid());
 

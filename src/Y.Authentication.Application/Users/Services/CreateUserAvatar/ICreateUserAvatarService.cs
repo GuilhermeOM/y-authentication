@@ -9,5 +9,5 @@ internal interface ICreateUserAvatarService
         IFormFile? avatarPhoto,
         CancellationToken cancellationToken);
 
-    Task RollbackUploadAsync(FileUpload? mediaUpload);
+    Task RollbackUploadAsync(FileUpload? avatarUpload);
 }

@@ -47,13 +47,13 @@ internal sealed class CreateUserAvatarService : ICreateUserAvatarService
         return uploadResult!;
     }
 
-    public async Task RollbackUploadAsync(FileUpload? mediaUpload)
+    public async Task RollbackUploadAsync(FileUpload? avatarUpload)
     {
-        if (mediaUpload is null)
+        if (avatarUpload is null)
         {
             return;
         }
 
-        await _storageService.DeleteAsync(mediaUpload);
+        await _storageService.DeleteAsync(avatarUpload);
     }
 }
