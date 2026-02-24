@@ -111,10 +111,76 @@ public class CreateUseCaseHandlerTests
     }
 
     [Fact]
+    public async Task HandleAsync_ShouldReturnFailure_WhenAvatarPhotoUploadFails()
+    {
+        // Arrange
+        var request = CreateRequest();
+        var byteArrayMock = Encoding.ASCII.GetBytes(Guid.NewGuid().ToString());
+
+        var userRoleName = Contract.SharedKernel.Enums.Role.User.ToString();
+        var userRole = Domain.Aggregates.Role.Role.Create(userRoleName).Value;
+
+        var avatarUploadError = new Error("upload_error", "error uploading");
+
+        _userRepositoryMock
+            .Setup(mock => mock.ExistsByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        _roleRepositoryMock
+            .Setup(mock => mock.GetByNameAsync(
+                It.Is<string>(roleName => roleName == userRoleName),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Domain.Aggregates.Role.Role.Create(userRoleName).Value);
+
+        _passwordHasherServiceMock
+            .Setup(mock => mock.HashPassword(request.Password))
+            .Returns(new PasswordHash(byteArrayMock, byteArrayMock));
+
+        _createUserAvatarServiceMock
+            .Setup(mock => mock.UploadAsync(
+                request.AvatarPhoto!,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure<FileUpload?>(avatarUploadError));
+
+        // Act
+        var result = await _handler.HandleAsync(request, default);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().BeEquivalentTo(avatarUploadError);
+
+        _userRepositoryMock.Verify(mock => mock.CreateAsync(
+            It.IsAny<User>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+
+        _userRepositoryMock.Verify(mock => mock.CreateMetadataAsync(
+            It.IsAny<UserMetadata>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+
+        _userRepositoryMock.Verify(mock => mock.CreateRoleAsync(
+            It.IsAny<UserRole>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+
+        _userRepositoryMock.Verify(mock => mock.CreateAvatarAsync(
+            It.IsAny<UserAvatar>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+
+        _unitOfWorkMock
+            .Verify(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+
+        _domainEventsDispatcherMock.Verify(mock => mock.DispatchAsync(
+            It.IsAny<IEnumerable<IDomainEvent>>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+
+        _createUserAvatarServiceMock
+            .Verify(mock => mock.RollbackUploadAsync(It.IsAny<FileUpload>()), Times.Never);
+    }
+
+    [Fact]
     public async Task HandleAsync_ShouldReturnFailure_WhenUserNotCreated()
     {
         // Arrange
-        var request = CreateRequest(withAvatarPhoto: true);
+        var request = CreateRequest();
         var userRoleName = Contract.SharedKernel.Enums.Role.User.ToString();
         var byteArrayMock = Encoding.ASCII.GetBytes(Guid.NewGuid().ToString());
         var avatarUploadResult = Result.Success<FileUpload?>(new FileUpload(Guid.NewGuid(), "http://dummy.com", "image/jpeg", ".jpg"));
@@ -179,7 +245,7 @@ public class CreateUseCaseHandlerTests
     public async Task HandleAsync_ShouldReturnFailure_WhenUserMetadataNotCreated()
     {
         // Arrange
-        var request = CreateRequest(withAvatarPhoto: true);
+        var request = CreateRequest();
         var userRoleName = Contract.SharedKernel.Enums.Role.User.ToString();
         var byteArrayMock = Encoding.ASCII.GetBytes(Guid.NewGuid().ToString());
         var avatarUploadResult = Result.Success<FileUpload?>(new FileUpload(Guid.NewGuid(), "http://dummy.com", "image/jpeg", ".jpg"));
@@ -383,13 +449,83 @@ public class CreateUseCaseHandlerTests
             .Verify(mock => mock.RollbackUploadAsync(avatarUploadResult.Value), Times.Once);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task HandleAsync_ShouldReturnSuccess(bool withAvatarPhoto)
+    [Fact]
+    public async Task HandleAsync_ShouldReturnSuccess_WhenAvatarPhotoIsNull()
     {
         // Arrange
-        var request = CreateRequest(withAvatarPhoto);
+        var request = CreateRequest();
+        var byteArrayMock = Encoding.ASCII.GetBytes(Guid.NewGuid().ToString());
+
+        var createUserMetadataId = Guid.NewGuid();
+        var userRole = Domain.Aggregates.Role.Role.Create(Contract.SharedKernel.Enums.Role.User.ToString()).Value;
+
+        var avatarUploadResult = Result.Success(default(FileUpload));
+
+        _userRepositoryMock
+            .Setup(mock => mock.ExistsByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        _roleRepositoryMock
+            .Setup(mock => mock.GetByNameAsync(
+                It.Is<string>(roleName => roleName == userRole.Name),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(userRole);
+
+        _passwordHasherServiceMock
+            .Setup(mock => mock.HashPassword(request.Password))
+            .Returns(new PasswordHash(byteArrayMock, byteArrayMock));
+
+        _createUserAvatarServiceMock
+            .Setup(mock => mock.UploadAsync(
+                request.AvatarPhoto!,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(avatarUploadResult);
+
+        _userRepositoryMock
+            .Setup(mock => mock.CreateAsync(
+                It.Is<User>(user => user.Email == request.Email),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Guid.NewGuid());
+
+        _userRepositoryMock
+            .Setup(mock => mock.CreateMetadataAsync(
+                It.Is<UserMetadata>(metadata => metadata.UserId != Guid.Empty && metadata.Name == request.Name),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Guid.NewGuid());
+
+        _userRepositoryMock
+            .Setup(mock => mock.CreateRoleAsync(
+                It.Is<UserRole>(role => role.UserId != Guid.Empty && role.Id == userRole.Id),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(userRole.Id);
+
+        // Act
+        var result = await _handler.HandleAsync(request, default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+
+        _userRepositoryMock
+            .Verify(mock => mock.CreateAvatarAsync(
+                It.IsAny<UserAvatar>(),
+                It.IsAny<CancellationToken>()), Times.Never);
+
+        _unitOfWorkMock
+            .Verify(mock => mock.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+
+        _domainEventsDispatcherMock.Verify(mock => mock.DispatchAsync(
+            It.Is<IEnumerable<IDomainEvent>>(domainEvents => AreDomainEventsWellDispatched(domainEvents, request)),
+            It.IsAny<CancellationToken>()), Times.Once);
+
+        _createUserAvatarServiceMock
+            .Verify(mock => mock.RollbackUploadAsync(It.IsAny<FileUpload>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleAsync_ShouldReturnSuccess_WhenAvatarPhotoIsNotNull()
+    {
+        // Arrange
+        var request = CreateRequest();
         var byteArrayMock = Encoding.ASCII.GetBytes(Guid.NewGuid().ToString());
 
         var createUserMetadataId = Guid.NewGuid();
@@ -473,19 +609,14 @@ public class CreateUseCaseHandlerTests
             && !string.IsNullOrWhiteSpace(sendUserEmailVerificationDomainEvent?.VerificationToken);
     }
 
-    public static CreateUserUseCase CreateRequest(bool withAvatarPhoto = false)
+    public static CreateUserUseCase CreateRequest()
     {
-        FormFile? avatarPhoto = null;
-
-        if (withAvatarPhoto)
-        {
-            avatarPhoto = new FormFile(
-                baseStream: new MemoryStream(Encoding.ASCII.GetBytes(Guid.NewGuid().ToString())),
-                baseStreamOffset: 0,
-                length: 1,
-                name: "avatarPhoto",
-                fileName: "avatarPhoto.jpg");
-        }
+        var avatarPhoto = new FormFile(
+            baseStream: new MemoryStream(Encoding.ASCII.GetBytes(Guid.NewGuid().ToString())),
+            baseStreamOffset: 0,
+            length: 1,
+            name: "avatarPhoto",
+            fileName: "avatarPhoto.jpg");
 
         return new()
         {

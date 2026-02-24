@@ -33,7 +33,7 @@ internal sealed class CreateUserAvatarService : ICreateUserAvatarService
         var inspectionResult = _fileInspectorService.InspectFileStream(stream);
         if (inspectionResult.IsFailure)
         {
-            return Result.Failure<FileUpload?>(UserErrors.UserAvatarInspectionFailed);
+            return Result.Failure<FileUpload?>(inspectionResult.Error);
         }
 
         if (!UserAvatar.IsSupportedMimeType(inspectionResult.Value.Mime))

@@ -24,5 +24,4 @@ public static class UserErrors
     public static Error UserPasswordNotValid => new(HttpStatusCode.Unauthorized, "USER_PASSWORD_NOT_VALID", "User password is not valid");
     public static Error UserCreationFailed => new(HttpStatusCode.InternalServerError, "USER_CREATION_FAILED", "An error occurred while creating the user");
     public static Error UserAvatarUnsupportedMimeType => new(HttpStatusCode.BadRequest, "USER_AVATAR_UNSUPPORTED_MIME_TYPE", "User avatar mime not supported");
-    public static Error UserAvatarInspectionFailed => new(HttpStatusCode.InternalServerError, "USER_AVATAR_INSPECTION_FAILED", "An error occurred while inspecting the user avatar");
 }
