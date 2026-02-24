@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Y.Authentication.Infrastructure.Persistence;
 
@@ -11,9 +12,11 @@ using Y.Authentication.Infrastructure.Persistence;
 namespace Y.Authentication.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDataContext))]
-    partial class AppDataContextModelSnapshot : ModelSnapshot
+    [Migration("20260215175305_UseMetadataAvatarUrlColumn")]
+    partial class UseMetadataAvatarUrlColumn
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -90,47 +93,15 @@ namespace Y.Authentication.Infrastructure.Persistence.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("Y.Authentication.Domain.Aggregates.User.UserAvatar", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(250)
-                        .HasColumnType("nvarchar(250)");
-
-                    b.Property<string>("Mime")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Url")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("UsersAvatar");
-                });
-
             modelBuilder.Entity("Y.Authentication.Domain.Aggregates.User.UserMetadata", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AvatarUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateOnly>("BirthDate")
                         .HasColumnType("date");
@@ -184,17 +155,6 @@ namespace Y.Authentication.Infrastructure.Persistence.Migrations
                     b.ToTable("UsersRoles");
                 });
 
-            modelBuilder.Entity("Y.Authentication.Domain.Aggregates.User.UserAvatar", b =>
-                {
-                    b.HasOne("Y.Authentication.Domain.Aggregates.User.User", "User")
-                        .WithOne("Avatar")
-                        .HasForeignKey("Y.Authentication.Domain.Aggregates.User.UserAvatar", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("Y.Authentication.Domain.Aggregates.User.UserMetadata", b =>
                 {
                     b.HasOne("Y.Authentication.Domain.Aggregates.User.User", "User")
@@ -227,8 +187,6 @@ namespace Y.Authentication.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Y.Authentication.Domain.Aggregates.User.User", b =>
                 {
-                    b.Navigation("Avatar");
-
                     b.Navigation("Metadata");
 
                     b.Navigation("Roles");

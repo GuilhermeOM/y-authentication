@@ -8,7 +8,7 @@ using Y.Authentication.Infrastructure.Resilience;
 using Y.Authentication.Infrastructure.Services;
 using Y.Contract.SharedKernel.Abstractions.Messaging;
 
-namespace Y.Authentication.UnitTest.Services;
+namespace Y.Authentication.UnitTest.Services.Infrastructure;
 public class ProducerServiceTests
 {
     private readonly Mock<IProducerAccessor> _producerAccessorMock;

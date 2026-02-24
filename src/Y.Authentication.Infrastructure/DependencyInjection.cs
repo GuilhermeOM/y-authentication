@@ -1,9 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MimeDetective;
 using Polly;
 using Y.Authentication.Domain.DomainEvents.Base;
-using Y.Authentication.Domain.Options;
 using Y.Authentication.Domain.Repositories;
 using Y.Authentication.Domain.Services;
 using Y.Authentication.Infrastructure.Background;
@@ -20,21 +21,15 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         return services
-            .AddOptions(configuration)
             .AddPersistence(configuration)
             .AddRepositories()
             .AddBackgroundServices()
-            .AddServices()
+            .AddAzureClients(configuration)
+            .AddFileInspector()
             .AddDomainEventsDispatcher()
+            .AddServices()
             .AddPipelinePolicies()
-            .ConfigureKafkaTopology(configuration);
-    }
-
-    public static IServiceCollection AddOptions(this IServiceCollection services, IConfiguration configuration)
-    {
-        services.Configure<AuthOptions>(c => configuration.GetSection("Jwt").Bind(c));
-
-        return services;
+            .AddKafka(configuration);
     }
 
     private static IServiceCollection AddPersistence(this IServiceCollection services, IConfiguration configuration)
@@ -58,15 +53,32 @@ public static class DependencyInjection
     private static IServiceCollection AddBackgroundServices(this IServiceCollection services)
     {
         services.AddHostedService<RoleConfiguratorBackgroundService>();
+        services.AddHostedService<BlobStorageConfiguratorService>();
 
         return services;
     }
 
-    private static IServiceCollection AddServices(this IServiceCollection services)
+    private static IServiceCollection AddAzureClients(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddScoped<IAuthService, AuthService>();
-        services.AddScoped<IPasswordHasherService, PasswordHasherService>();
-        services.AddScoped<IProducerService, ProducerService>();
+        var blobServiceUriOrConnectionString = configuration.GetConnectionString("BlobStorage");
+
+        services.AddAzureClients(builder =>
+        {
+            builder.AddBlobServiceClient(blobServiceUriOrConnectionString!);
+        });
+
+        return services;
+    }
+
+    private static IServiceCollection AddFileInspector(this IServiceCollection services)
+    {
+        services.AddSingleton(provider =>
+        {
+            return new ContentInspectorBuilder()
+            {
+                Definitions = MimeDetective.Definitions.DefaultDefinitions.All()
+            }.Build();
+        });
 
         return services;
     }
@@ -77,9 +89,28 @@ public static class DependencyInjection
         return services;
     }
 
+    private static IServiceCollection AddServices(this IServiceCollection services)
+    {
+        services.AddSingleton<IStorageService, StorageService>();
+        services.AddSingleton<IFileInspectorService, FileInspectorService>();
+
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IPasswordHasherService, PasswordHasherService>();
+        services.AddScoped<IProducerService, ProducerService>();
+        
+        return services;
+    }
+
     private static IServiceCollection AddPipelinePolicies(this IServiceCollection services)
     {
         services.AddResiliencePipeline(Resiliences.FastDefaultRetryPipelinePolicy, builder => ResilienceBuilder.FastDefaultRetryPipelinePolicy(builder));
+
+        return services;
+    }
+
+    private static IServiceCollection AddKafka(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.ConfigureKafkaTopology(configuration);
 
         return services;
     }

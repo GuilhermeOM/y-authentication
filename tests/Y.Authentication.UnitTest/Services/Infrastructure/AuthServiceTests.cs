@@ -7,7 +7,7 @@ using Y.Authentication.Domain.Options;
 using Y.Authentication.Infrastructure.Services;
 using Y.Authentication.UnitTest.Fixtures;
 
-namespace Y.Authentication.UnitTest.Services;
+namespace Y.Authentication.UnitTest.Services.Infrastructure;
 public class AuthServiceTests
 {
     private readonly Mock<IOptions<AuthOptions>> _authOptionsMock;

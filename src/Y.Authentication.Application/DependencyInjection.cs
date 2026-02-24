@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Y.Authentication.Application.Abstractions.Behaviors;
 using Y.Authentication.Application.Abstractions.Messaging;
+using Y.Authentication.Application.Users.Services.CreateUserAvatar;
 
 namespace Y.Authentication.Application;
 public static class DependencyInjection
@@ -13,7 +14,8 @@ public static class DependencyInjection
             .AddUseCases()
             .AddDomainEvents()
             .AddValidators()
-            .AddDecorators();
+            .AddDecorators()
+            .AddServices();
     }
 
     public static IServiceCollection AddUseCases(this IServiceCollection services)
@@ -53,6 +55,13 @@ public static class DependencyInjection
 
         services.TryDecorate(typeof(IUseCaseHandler<>), typeof(LoggingDecorator.UseCaseHandler<>));
         services.TryDecorate(typeof(IUseCaseHandler<,>), typeof(LoggingDecorator.UseCaseHandler<,>));
+
+        return services;
+    }
+
+    public static IServiceCollection AddServices(this IServiceCollection services)
+    {
+        services.AddScoped<ICreateUserAvatarService, CreateUserAvatarService>();
 
         return services;
     }

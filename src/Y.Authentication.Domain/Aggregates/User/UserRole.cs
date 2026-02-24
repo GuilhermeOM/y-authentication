@@ -20,12 +20,12 @@ public class UserRole : Entity
     {
         if (userId == Guid.Empty)
         {
-            return Result.Failure<UserRole>(UserErrors.EmptyUser);
+            return Result.Failure<UserRole>(UserErrors.UserRoleEmptyUser);
         }
 
         if (roleId == Guid.Empty)
         {
-            return Result.Failure<UserRole>(UserErrors.EmptyUserRole);
+            return Result.Failure<UserRole>(UserErrors.UserRoleEmptyRole);
         }
 
         return Result.Success(new UserRole(userId, roleId));

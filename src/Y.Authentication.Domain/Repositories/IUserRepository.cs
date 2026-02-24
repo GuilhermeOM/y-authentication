@@ -9,5 +9,6 @@ public interface IUserRepository
     Task<User?> TrackByVerificationTokenAsync(string verificationToken, CancellationToken cancellationToken = default);
     Task<Guid> CreateAsync(User user, CancellationToken cancellationToken = default);
     Task<Guid> CreateMetadataAsync(UserMetadata userMetadata, CancellationToken cancellationToken = default);
+    Task<Guid> CreateAvatarAsync(UserAvatar userAvatar, CancellationToken cancellationToken = default);
     Task<Guid> CreateRoleAsync(UserRole userRole, CancellationToken cancellationToken = default);
 }
