@@ -4,10 +4,9 @@ using Y.Authentication.Domain.ValueObjects;
 namespace Y.Authentication.Domain.Services;
 public interface IStorageService
 {
-    Task<Result<FileUpload>> UploadAsync(
-        Stream stream,
-        FileInspectionResult inspectionResult,
+    Task<Result<FileUploadResult>> UploadAsync(
+        FileUpload fileUpload,
         CancellationToken cancellationToken = default);
 
-    Task DeleteAsync(FileUpload media);
+    Task DeleteAsync(string filePath);
 }

@@ -13,7 +13,6 @@ namespace Y.Authentication.Infrastructure.Services;
 internal sealed class StorageService : IStorageService
 {
     public const string PublicAuthenticationContainerName = "public-authentication";
-    public const string ProfilePathName = "profiles";
 
     private readonly BlobServiceClient _blobServiceClient;
     private readonly ResiliencePipelineProvider<string> _resiliencePipelineProvider;
@@ -29,72 +28,60 @@ internal sealed class StorageService : IStorageService
         _blobStorageOptions = blobStorageOptions;
     }
 
-    public async Task<Result<FileUpload>> UploadAsync(
-        Stream stream,
-        FileInspectionResult inspectionResult,
+    public async Task<Result<FileUploadResult>> UploadAsync(
+        FileUpload fileUpload,
         CancellationToken cancellationToken = default)
     {
         return await _resiliencePipelineProvider
             .GetPipeline(Resiliences.FastDefaultRetryPipelinePolicy)
             .ExecuteAsync(async _ =>
             {
-                return await UploadMediaAsync(
-                    stream,
-                    inspectionResult,
-                    cancellationToken);
+                return await UploadFileAsync(fileUpload, cancellationToken);
             }, cancellationToken);
     }
 
-    private async Task<Result<FileUpload>> UploadMediaAsync(
-        Stream data,
-        FileInspectionResult inspectionResult,
+    private async Task<Result<FileUploadResult>> UploadFileAsync(
+        FileUpload fileUpload,
         CancellationToken cancellationToken)
     {
-        data.Seek(0, SeekOrigin.Begin);
-
-        var blobId = Guid.NewGuid();
-        var mediaPath = CreateMediaPath(blobId, inspectionResult.Extension);
+        fileUpload.Data.Seek(0, SeekOrigin.Begin);
 
         var blobContainerClient = _blobServiceClient.GetBlobContainerClient(PublicAuthenticationContainerName);
-        var blobClient = blobContainerClient.GetBlobClient(mediaPath);
+        var blobClient = blobContainerClient.GetBlobClient(fileUpload.Path);
 
-        var upload = await blobClient.UploadAsync(data, new BlobHttpHeaders
+        var upload = await blobClient.UploadAsync(fileUpload.Data, new BlobHttpHeaders
         {
-            ContentType = inspectionResult.Mime,
+            ContentType = fileUpload.Mime,
             CacheControl = "public, max-age=31536000"
         }, cancellationToken: cancellationToken);
 
         if (upload.GetRawResponse().Status >= (int)HttpStatusCode.BadRequest)
         {
-            return Result.Failure<FileUpload>(StorageServiceErrors.BlobStorageFailure);
+            return Result.Failure<FileUploadResult>(StorageServiceErrors.BlobStorageFailure);
         }
 
-        var mediaUpload = new FileUpload(
-            blobId,
-            CreateMediaPublicUrl(mediaPath),
-            inspectionResult.Mime,
-            inspectionResult.Extension);
+        var uploadResult = new FileUploadResult(
+            fileUpload.BlobId,
+            CreateFilePublicUrl(fileUpload.Path),
+            fileUpload.Path,
+            fileUpload.Mime,
+            fileUpload.Description);
 
-        return Result.Success(mediaUpload);
+        return Result.Success(uploadResult);
     }
 
-    public async Task DeleteAsync(FileUpload mediaUpload)
+    public async Task DeleteAsync(string filePath)
     {
-        var mediaPath = CreateMediaPath(mediaUpload.BlobId, mediaUpload.Extension);
-
         var blobContainerClient = _blobServiceClient.GetBlobContainerClient(PublicAuthenticationContainerName);
-        var blobClient = blobContainerClient.GetBlobClient(mediaPath);
+        var blobClient = blobContainerClient.GetBlobClient(filePath);
 
         await blobClient.DeleteIfExistsAsync();
     }
 
-    private static string CreateMediaPath(Guid blobId, string extension) => $"{ProfilePathName}/{blobId:N}.{extension}";
-
-    private string CreateMediaPublicUrl(string mediaPath) => $"{_blobStorageOptions.Value.BaseUrl}/{PublicAuthenticationContainerName}/{mediaPath}";
+    private string CreateFilePublicUrl(string filePath) => $"{_blobStorageOptions.Value.BaseUrl}/{PublicAuthenticationContainerName}/{filePath}";
 }
 
 internal static class StorageServiceErrors
 {
     public static Error BlobStorageFailure => new("BLOB_STORAGE_FAILURE", "An error occurred while communicating with blob storage");
 }
-

@@ -5,9 +5,9 @@ using Y.Authentication.Domain.ValueObjects;
 namespace Y.Authentication.Application.Users.Services.CreateUserAvatar;
 internal interface ICreateUserAvatarService
 {
-    Task<Result<FileUpload?>> UploadAsync(
+    Task<Result<FileUploadResult?>> UploadAsync(
         IFormFile? avatarPhoto,
         CancellationToken cancellationToken);
 
-    Task RollbackUploadAsync(FileUpload? avatarUpload);
+    Task RollbackUploadAsync(FileUploadResult? avatarUpload);
 }
