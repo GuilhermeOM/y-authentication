@@ -8,6 +8,8 @@ using Y.Authentication.Domain.ValueObjects;
 namespace Y.Authentication.Application.Users.Services.CreateUserAvatar;
 internal sealed class CreateUserAvatarService : ICreateUserAvatarService
 {
+    public const string ProfilePathName = "profiles";
+
     private readonly IStorageService _storageService;
     private readonly IFileInspectorService _fileInspectorService;
 
@@ -19,13 +21,13 @@ internal sealed class CreateUserAvatarService : ICreateUserAvatarService
         _fileInspectorService = fileInspectorService;
     }
 
-    public async Task<Result<FileUpload?>> UploadAsync(
+    public async Task<Result<FileUploadResult?>> UploadAsync(
         IFormFile? avatarPhoto,
         CancellationToken cancellationToken)
     {
         if (avatarPhoto is null)
         {
-            return Result.Success(default(FileUpload));
+            return Result.Success(default(FileUploadResult));
         }
 
         using var stream = avatarPhoto.OpenReadStream();
@@ -33,27 +35,36 @@ internal sealed class CreateUserAvatarService : ICreateUserAvatarService
         var inspectionResult = _fileInspectorService.InspectFileStream(stream);
         if (inspectionResult.IsFailure)
         {
-            return Result.Failure<FileUpload?>(inspectionResult.Error);
+            return Result.Failure<FileUploadResult?>(inspectionResult.Error);
         }
 
         if (!UserAvatar.IsSupportedMimeType(inspectionResult.Value.Mime))
         {
-            return Result.Failure<FileUpload?>(UserErrors.UserAvatarUnsupportedMimeType);
+            return Result.Failure<FileUploadResult?>(UserErrors.UserAvatarUnsupportedMimeType);
         }
 
-        var uploadResult = await _storageService
-            .UploadAsync(stream, inspectionResult.Value, cancellationToken);
+        var blobId = Guid.NewGuid();
+        var mediaPath = CreateFilePath(blobId, inspectionResult.Value.Extension);
 
-        return uploadResult!;
+        var fileUpload = new FileUpload(
+            blobId,
+            stream,
+            mediaPath,
+            inspectionResult.Value.Mime,
+            inspectionResult.Value.Extension);
+
+        return (await _storageService.UploadAsync(fileUpload, cancellationToken))!;
     }
 
-    public async Task RollbackUploadAsync(FileUpload? avatarUpload)
+    private static string CreateFilePath(Guid blobId, string extension) => $"{ProfilePathName}/{blobId:N}.{extension}";
+
+    public async Task RollbackUploadAsync(FileUploadResult? avatarUpload)
     {
         if (avatarUpload is null)
         {
             return;
         }
 
-        await _storageService.DeleteAsync(avatarUpload);
+        await _storageService.DeleteAsync(avatarUpload.Path);
     }
 }

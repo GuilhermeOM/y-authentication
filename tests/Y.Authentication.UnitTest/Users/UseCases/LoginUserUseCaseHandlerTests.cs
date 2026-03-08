@@ -36,7 +36,7 @@ public class LoginUserUseCaseHandlerTests
         var request = new LoginUserUseCase("dummy@dummy.com", "dummypassword");
 
         _userRepositoryMock
-            .Setup(mock => mock.GetWithMetadataRolesByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
+            .Setup(mock => mock.GetWithMetadataAvatarRolesByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
             .ReturnsAsync(default(User));
 
         // Act
@@ -55,7 +55,7 @@ public class LoginUserUseCaseHandlerTests
         var user = UserFixture.CreateValid();
 
         _userRepositoryMock
-            .Setup(mock => mock.GetWithMetadataRolesByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
+            .Setup(mock => mock.GetWithMetadataAvatarRolesByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
         _passwordHasherServiceMock
@@ -78,7 +78,7 @@ public class LoginUserUseCaseHandlerTests
         var user = UserFixture.CreateValid();
 
         _userRepositoryMock
-            .Setup(mock => mock.GetWithMetadataRolesByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
+            .Setup(mock => mock.GetWithMetadataAvatarRolesByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
         _passwordHasherServiceMock
@@ -102,7 +102,7 @@ public class LoginUserUseCaseHandlerTests
         user.Verify();
 
         _userRepositoryMock
-            .Setup(mock => mock.GetWithMetadataRolesByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
+            .Setup(mock => mock.GetWithMetadataAvatarRolesByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
         _passwordHasherServiceMock

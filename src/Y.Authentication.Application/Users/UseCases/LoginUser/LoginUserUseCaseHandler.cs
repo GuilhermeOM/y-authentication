@@ -24,7 +24,7 @@ internal sealed class LoginUserUseCaseHandler : IUseCaseHandler<LoginUserUseCase
 
     public async Task<Result<AuthToken>> HandleAsync(LoginUserUseCase request, CancellationToken cancellationToken = default)
     {
-        var user = await _userRepository.GetWithMetadataRolesByEmailAsync(request.Email, cancellationToken);
+        var user = await _userRepository.GetWithMetadataAvatarRolesByEmailAsync(request.Email, cancellationToken);
         if (user is null)
         {
             return Result.Failure<AuthToken>(UserErrors.UserNotFound);

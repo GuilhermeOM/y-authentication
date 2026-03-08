@@ -33,7 +33,7 @@ public class User : AggregateRoot
         DateOnly birthDate,
         Guid roleId,
         string? name = null,
-        FileUpload? avatarUpload = null)
+        FileUploadResult? avatarUpload = null)
     {
         if (string.IsNullOrWhiteSpace(email))
         {
@@ -87,7 +87,7 @@ public class User : AggregateRoot
         return Result.Success();
     }
 
-    private Result SetAvatar(FileUpload? avatarUpload)
+    private Result SetAvatar(FileUploadResult? avatarUpload)
     {
         if (avatarUpload is null)
         {

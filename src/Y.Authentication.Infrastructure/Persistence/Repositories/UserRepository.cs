@@ -17,11 +17,12 @@ internal sealed class UserRepository : IUserRepository
         return await _context.Users.AsNoTracking().AnyAsync(user => user.Email == email, cancellationToken);
     }
 
-    public async Task<User?> GetWithMetadataRolesByEmailAsync(string email, CancellationToken cancellationToken = default)
+    public async Task<User?> GetWithMetadataAvatarRolesByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
         return await _context.Users
             .AsNoTracking()
             .Include(user => user.Metadata)
+            .Include(user => user.Avatar)
             .Include(user => user.Roles)
             .ThenInclude(userRole => userRole.Role)
             .SingleOrDefaultAsync(user => user.Email == email, cancellationToken);

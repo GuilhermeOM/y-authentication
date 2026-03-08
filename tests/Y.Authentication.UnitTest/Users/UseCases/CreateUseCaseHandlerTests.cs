@@ -140,7 +140,7 @@ public class CreateUseCaseHandlerTests
             .Setup(mock => mock.UploadAsync(
                 request.AvatarPhoto!,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Failure<FileUpload?>(avatarUploadError));
+            .ReturnsAsync(Result.Failure<FileUploadResult?>(avatarUploadError));
 
         // Act
         var result = await _handler.HandleAsync(request, default);
@@ -173,7 +173,7 @@ public class CreateUseCaseHandlerTests
             It.IsAny<CancellationToken>()), Times.Never);
 
         _createUserAvatarServiceMock
-            .Verify(mock => mock.RollbackUploadAsync(It.IsAny<FileUpload>()), Times.Never);
+            .Verify(mock => mock.RollbackUploadAsync(It.IsAny<FileUploadResult>()), Times.Never);
     }
 
     [Fact]
@@ -183,7 +183,7 @@ public class CreateUseCaseHandlerTests
         var request = CreateRequest();
         var userRoleName = Contract.SharedKernel.Enums.Role.User.ToString();
         var byteArrayMock = Encoding.ASCII.GetBytes(Guid.NewGuid().ToString());
-        var avatarUploadResult = Result.Success<FileUpload?>(new FileUpload(Guid.NewGuid(), "http://dummy.com", "image/jpeg", ".jpg"));
+        var avatarUploadResult = Result.Success<FileUploadResult?>(new FileUploadResult(Guid.NewGuid(), "http://dummy.com", "/path", "image/jpeg", string.Empty));
 
         _userRepositoryMock
             .Setup(mock => mock.ExistsByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
@@ -248,7 +248,7 @@ public class CreateUseCaseHandlerTests
         var request = CreateRequest();
         var userRoleName = Contract.SharedKernel.Enums.Role.User.ToString();
         var byteArrayMock = Encoding.ASCII.GetBytes(Guid.NewGuid().ToString());
-        var avatarUploadResult = Result.Success<FileUpload?>(new FileUpload(Guid.NewGuid(), "http://dummy.com", "image/jpeg", ".jpg"));
+        var avatarUploadResult = Result.Success<FileUploadResult?>(new FileUploadResult(Guid.NewGuid(), "http://dummy.com", "/path", "image/jpeg", string.Empty));
 
         _userRepositoryMock
             .Setup(mock => mock.ExistsByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
@@ -315,7 +315,7 @@ public class CreateUseCaseHandlerTests
         var request = CreateRequest();
         var userRoleName = Contract.SharedKernel.Enums.Role.User.ToString();
         var byteArrayMock = Encoding.ASCII.GetBytes(Guid.NewGuid().ToString());
-        var avatarUploadResult = Result.Success<FileUpload?>(new FileUpload(Guid.NewGuid(), "http://dummy.com", "image/jpeg", ".jpg"));
+        var avatarUploadResult = Result.Success<FileUploadResult?>(new FileUploadResult(Guid.NewGuid(), "http://dummy.com", "/path", "image/jpeg", string.Empty));
 
         _userRepositoryMock
             .Setup(mock => mock.ExistsByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
@@ -386,7 +386,7 @@ public class CreateUseCaseHandlerTests
         var userRoleName = Contract.SharedKernel.Enums.Role.User.ToString();
         var userRole = Domain.Aggregates.Role.Role.Create(userRoleName).Value;
 
-        var avatarUploadResult = Result.Success<FileUpload?>(new FileUpload(Guid.NewGuid(), "http://dummy.com", "image/jpeg", ".jpg"));
+        var avatarUploadResult = Result.Success<FileUploadResult?>(new FileUploadResult(Guid.NewGuid(), "http://dummy.com", "/path", "image/jpeg", string.Empty));
 
         _userRepositoryMock
             .Setup(mock => mock.ExistsByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
@@ -459,7 +459,7 @@ public class CreateUseCaseHandlerTests
         var createUserMetadataId = Guid.NewGuid();
         var userRole = Domain.Aggregates.Role.Role.Create(Contract.SharedKernel.Enums.Role.User.ToString()).Value;
 
-        var avatarUploadResult = Result.Success(default(FileUpload));
+        var avatarUploadResult = Result.Success(default(FileUploadResult));
 
         _userRepositoryMock
             .Setup(mock => mock.ExistsByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
@@ -518,7 +518,7 @@ public class CreateUseCaseHandlerTests
             It.IsAny<CancellationToken>()), Times.Once);
 
         _createUserAvatarServiceMock
-            .Verify(mock => mock.RollbackUploadAsync(It.IsAny<FileUpload>()), Times.Never);
+            .Verify(mock => mock.RollbackUploadAsync(It.IsAny<FileUploadResult>()), Times.Never);
     }
 
     [Fact]
@@ -531,7 +531,7 @@ public class CreateUseCaseHandlerTests
         var createUserMetadataId = Guid.NewGuid();
         var userRole = Domain.Aggregates.Role.Role.Create(Contract.SharedKernel.Enums.Role.User.ToString()).Value;
 
-        var avatarUploadResult = Result.Success<FileUpload?>(new FileUpload(Guid.NewGuid(), "http://dummy.com", "image/jpeg", ".jpg"));
+        var avatarUploadResult = Result.Success<FileUploadResult?>(new FileUploadResult(Guid.NewGuid(), "http://dummy.com", "/path", "image/jpeg", string.Empty));
 
         _userRepositoryMock
             .Setup(mock => mock.ExistsByEmailAsync(request.Email, It.IsAny<CancellationToken>()))
@@ -596,7 +596,7 @@ public class CreateUseCaseHandlerTests
             It.IsAny<CancellationToken>()), Times.Once);
 
         _createUserAvatarServiceMock
-            .Verify(mock => mock.RollbackUploadAsync(It.IsAny<FileUpload>()), Times.Never);
+            .Verify(mock => mock.RollbackUploadAsync(It.IsAny<FileUploadResult>()), Times.Never);
     }
 
     private static bool AreDomainEventsWellDispatched(IEnumerable<IDomainEvent> events, CreateUserUseCase request)

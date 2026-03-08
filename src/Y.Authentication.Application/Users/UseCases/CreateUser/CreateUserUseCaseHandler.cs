@@ -14,7 +14,7 @@ using Y.Contract.SharedKernel.Enums;
 namespace Y.Authentication.Application.Users.UseCases.CreateUser;
 internal sealed class CreateUserUseCaseHandler : IUseCaseHandler<CreateUserUseCase>
 {
-    private FileUpload? _uploadedAvatar = null;
+    private FileUploadResult? _uploadedAvatar = null;
 
     private readonly ILogger<CreateUserUseCaseHandler> _logger;
     private readonly IPasswordHasherService _passwordHasherService;
